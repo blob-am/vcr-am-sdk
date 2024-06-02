@@ -1,0 +1,27 @@
+{
+  "extends": [
+    "@tsconfig/node20/tsconfig.json",
+    "@tsconfig/strictest/tsconfig.json"
+  ],
+  "files": ["./src/index.ts"],
+  "include": ["./src/**/*.ts"],
+  "exclude": ["node_modules", "lib"],
+  "compilerOptions": {
+    "moduleResolution": "node",
+    "target": "esnext",
+    "module": "ESNext",
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "declaration": true,
+    "sourceMap": true,
+    "outDir": "./lib/esm",
+    "forceConsistentCasingInFileNames": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noUncheckedIndexedAccess": true,
+    "skipLibCheck": true
+  },
+  "ts-node": {
+    "esm": true
+  }
+}
