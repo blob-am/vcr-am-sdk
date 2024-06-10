@@ -54,7 +54,7 @@ type ExistingOffer = {
 
 type OfferTitle =
   | {
-      type: "localizer";
+      type: "localized";
       content: Partial<Record<Language, string>> & {
         hy: string; // required
       };
