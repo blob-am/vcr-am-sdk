@@ -52,13 +52,21 @@ type ExistingOffer = {
   externalId: string;
 };
 
-type NewOffer = {
-  title: {
-    content: Partial<Record<Language, string>> & {
-      hy: string; // required
+type OfferTitle =
+  | {
+      type: "localizer";
+      content: Partial<Record<Language, string>> & {
+        hy: string; // required
+      };
+      localizationStrategy: "translation" | "transliteration";
+    }
+  | {
+      type: "universal";
+      content: string;
     };
-    localizationStrategy: "translation" | "transliteration";
-  };
+
+type NewOffer = {
+  title: OfferTitle;
   type: "product" | "service";
   classifierCode: string;
   defaultMeasureUnit: Unit;
