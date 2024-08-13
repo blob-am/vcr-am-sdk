@@ -6,6 +6,7 @@ import type { SaleData } from "./types";
 const API_URL = "https://vcr.am/api/v1";
 
 const saleResponseSchema = z.object({
+  urlId: z.string(),
   saleId: z.number(),
   crn: z.string(),
   srcReceiptId: z.number().int(),
