@@ -1,7 +1,7 @@
 import { fetchWithValidation, simpleFetch } from "simple-typed-fetch";
 import { z } from "zod";
 
-import type { SaleData } from "./types";
+import type { Language, SaleData } from "./types";
 
 const API_URL = "https://vcr.am/api/v1";
 
@@ -11,6 +11,10 @@ const saleResponseSchema = z.object({
   crn: z.string(),
   srcReceiptId: z.number().int(),
   fiscal: z.string(),
+});
+
+const errorResponseSchema = z.object({
+  error: z.string(),
 });
 
 export default class VCRClient {
@@ -30,12 +34,37 @@ export default class VCRClient {
             },
             body: JSON.stringify(data),
           },
-          z.object({
-            error: z.string(),
-          })
+          errorResponseSchema
         )
     )();
 
     return responseData;
+  }
+
+  async searchClassifierCategory(
+    query: string,
+    type: "product" | "service",
+    language: Language
+  ) {
+    const url = new URL(`${API_URL}/searchClassifier`);
+    url.searchParams.append("query", query);
+    url.searchParams.append("type", type);
+    url.searchParams.append("language", language);
+
+    return await simpleFetch(
+      async () =>
+        await fetchWithValidation(
+          url.toString(),
+          z.array(z.object({ code: z.string(), title: z.string() })),
+          {
+            method: "GET",
+            headers: {
+              "x-api-key": this.apiKey,
+              "Content-Type": "application/json",
+            },
+          },
+          errorResponseSchema
+        )
+    )();
   }
 }

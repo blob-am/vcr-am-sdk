@@ -14,7 +14,7 @@ type CashierId = CashierInternalId | CashierDeskId;
 
 export type Unit = (typeof unitsKeys)[number];
 
-type Language = (typeof AVAILABLE_LANGUAGES)[number];
+export type Language = (typeof AVAILABLE_LANGUAGES)[number];
 
 type PercentDiscount = {
   type: "percent";
