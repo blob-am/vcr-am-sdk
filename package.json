@@ -1,7 +1,7 @@
 {
   "name": "@blob-solutions/vcr-am-sdk",
-  "version": "0.6.0",
-  "description": "",
+  "version": "0.7.0",
+  "description": "Virtual Cash Register SDK for Armenia",
   "keywords": [
     "virtual cash register",
     "cash register",
@@ -19,9 +19,9 @@
   "type": "module",
   "exports": {
     ".": {
+      "types": "./lib/index.d.ts",
       "require": "./lib/index.cjs",
-      "import": "./lib/index.js",
-      "types": "./lib/index.d.ts"
+      "import": "./lib/index.js"
     },
     "./browser": {
       "browser": "./lib/index.global.js"
@@ -39,8 +39,8 @@
     "watch-ts": "tsc -w --skipLibCheck"
   },
   "dependencies": {
-    "simple-typed-fetch": "^0.2.13",
-    "typescript": "^5.6.2",
+    "simple-typed-fetch": "^0.2.14",
+    "typescript": "^5.6.3",
     "unfetch": "^5.0.0",
     "zod": "^3.23.8"
   },
@@ -48,7 +48,7 @@
     "@tsconfig/node20": "^20.1.4",
     "@tsconfig/strictest": "^2.0.5",
     "@types/node": "^20.14.2",
-    "tsup": "^8.2.4",
+    "tsup": "^8.3.0",
     "type-fest": "^4.26.1"
   },
   "publishConfig": {

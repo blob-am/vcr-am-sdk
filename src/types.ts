@@ -65,14 +65,16 @@ type OfferTitle =
       content: string;
     };
 
+type DepartmentInput = {
+  id: number;
+};
+
 type NewOffer = {
   title: OfferTitle;
   type: "product" | "service";
   classifierCode: string;
   defaultMeasureUnit: Unit;
-  defaultDepartment: {
-    internalId: number;
-  };
+  defaultDepartment: DepartmentInput;
   externalId: string;
 };
 
@@ -80,9 +82,7 @@ type Offer = NewOffer | ExistingOffer;
 
 export type SaleItem = {
   offer: Offer;
-  department: {
-    internalId: number;
-  };
+  department: DepartmentInput;
   quantity: string;
   price: string;
   unit: Unit;
