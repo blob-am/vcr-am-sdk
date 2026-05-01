@@ -1,0 +1,42 @@
+# Trusted publishing to npm via OIDC.
+#
+# Setup steps (one-time, in the npm UI for @blob-solutions/vcr-am-sdk):
+#   Settings → Publishing access → Add trusted publisher
+#     - Publisher: GitHub Actions
+#     - Repository: blob-am/vcr-am-sdk
+#     - Workflow filename: publish.yml
+#     - Environment: (leave blank, or "release" if you want extra approval gating)
+#
+# After that, no NPM_TOKEN secret is needed. npm provenance attestations are
+# generated automatically because the publish runs from a trusted CI flow.
+
+name: Publish to npm
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write # required for npm provenance / trusted publishing
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # prepublishOnly already runs typecheck + test + build + publint + attw.
+      - run: pnpm publish --access public --no-git-checks

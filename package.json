@@ -1,12 +1,24 @@
 {
   "name": "@blob-solutions/vcr-am-sdk",
-  "version": "0.8.0",
-  "description": "Virtual Cash Register SDK for Armenia",
+  "version": "0.10.0",
+  "description": "Official TypeScript/JavaScript SDK for the VCR.AM Virtual Cash Register API — fiscalize sales, refunds, and prepayments through Armenia's State Revenue Committee.",
   "keywords": [
-    "virtual cash register",
-    "cash register",
-    "armenia"
+    "vcr",
+    "vcr.am",
+    "armenia",
+    "armenian",
+    "cash-register",
+    "virtual-cash-register",
+    "fiscalization",
+    "src",
+    "tax-service",
+    "e-receipt",
+    "fiscal",
+    "blob-solutions",
+    "typescript",
+    "sdk"
   ],
+  "homepage": "https://vcr.am",
   "bugs": {
     "url": "https://github.com/blob-am/vcr-am-sdk/issues"
   },
@@ -17,42 +29,71 @@
   "license": "ISC",
   "author": "Alex Kraiz",
   "type": "module",
+  "sideEffects": false,
   "exports": {
     ".": {
-      "types": "./lib/index.d.ts",
-      "require": "./lib/index.cjs",
-      "import": "./lib/index.js"
+      "import": {
+        "types": "./lib/index.d.ts",
+        "default": "./lib/index.js"
+      },
+      "require": {
+        "types": "./lib/index.d.cts",
+        "default": "./lib/index.cjs"
+      }
     },
-    "./browser": {
-      "browser": "./lib/index.global.js"
-    }
+    "./package.json": "./package.json"
   },
   "main": "./lib/index.cjs",
   "module": "./lib/index.js",
   "types": "./lib/index.d.ts",
   "files": [
-    "lib/**/*"
+    "lib/**/*",
+    "CHANGELOG.md",
+    "LICENSE",
+    "README.md"
   ],
+  "engines": {
+    "node": ">=22.12.0"
+  },
   "scripts": {
-    "build": "tsup src/index.ts",
-    "watch-ts": "tsc -w --skipLibCheck"
+    "build": "tsup",
+    "clean": "rm -rf lib coverage",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "lint": "biome check && pnpm lint:no-as",
+    "lint:fix": "biome check --write",
+    "lint:no-as": "node --experimental-strip-types --no-warnings scripts/lint-no-as-cast.ts",
+    "format": "biome format --write",
+    "lint:package": "publint && attw --pack .",
+    "check": "pnpm lint && pnpm typecheck && pnpm test",
+    "prepublishOnly": "pnpm clean && pnpm check && pnpm build && pnpm lint:package"
   },
   "dependencies": {
-    "simple-typed-fetch": "^0.3.1",
-    "typescript": "^5.7.2",
-    "zod": "^3.24.1"
+    "zod": "^4.4.1"
   },
   "devDependencies": {
-    "@tsconfig/node20": "^20.1.4",
+    "@arethetypeswrong/cli": "^0.18.2",
+    "@biomejs/biome": "^2.4.14",
+    "@tsconfig/node24": "^24.0.0",
     "@tsconfig/strictest": "^2.0.5",
-    "@types/node": "^20.17.10",
-    "tsup": "^8.3.5",
-    "type-fest": "^4.30.2"
+    "@types/node": "^25.6.0",
+    "@vitest/coverage-v8": "^4.1.5",
+    "publint": "^0.3.18",
+    "tsup": "^8.5.1",
+    "typescript": "^5.9.3",
+    "vite": "^8.0.10",
+    "vitest": "^4.1.5"
   },
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "provenance": true
   },
-  "overrides": {
-    "tsconfig-paths": "^4.0.0"
+  "packageManager": "pnpm@10.33.2",
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
   }
 }
