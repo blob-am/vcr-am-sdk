@@ -2,6 +2,22 @@
 
 All notable changes to `@blob-solutions/vcr-am-sdk`. The format is loosely based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project follows [Semantic Versioning](https://semver.org/).
 
+## [0.11.0] — 2026-05-13
+
+### Breaking
+
+- `CreateDepartmentInput` now requires `title: { value: LocalizedName; localizationStrategy }` (mirroring `CreateCashierInput.name` and `CreateOfferInput.title`). `value.hy` is required, `value.ru`/`value.en` are optional. The server-side endpoint previously persisted departments without a title, which crashed X/Z reports for any sale that referenced one — the 0.10.0 call shape (`{ taxRegime, externalId? }`) is no longer accepted. Update calls to:
+
+  ```ts
+  await client.createDepartment({
+    taxRegime: "vat",
+    title: {
+      value: { hy: "Մթերք", ru: "Продукты", en: "Groceries" },
+      localizationStrategy: "translation",
+    },
+  });
+  ```
+
 ## [0.10.0] — 2026-05-02
 
 ### Breaking

@@ -163,6 +163,16 @@ export type CreateCashierInput = {
 export type CreateDepartmentInput = {
   externalId?: string;
   taxRegime: TaxRegime;
+  /**
+   * Department title shown on reports and receipts. `value.hy` is required;
+   * `value.ru` and `value.en` are optional and auto-transliterated from
+   * `hy` at render time when missing. `localizationStrategy` follows the
+   * same shape used by `CreateCashierInput.name` and `CreateOfferInput.title`.
+   */
+  title: {
+    value: LocalizedName;
+    localizationStrategy: "translation" | "transliteration";
+  };
 };
 
 export type CreateOfferInputProduct = {

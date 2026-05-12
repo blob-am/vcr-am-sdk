@@ -91,20 +91,30 @@ describe("VCRClient.createOffer", () => {
 });
 
 describe("VCRClient.createDepartment", () => {
-  it("POSTs to /departments with taxRegime", async () => {
+  it("POSTs to /departments with taxRegime and title", async () => {
     const fetchMock = makeFetchMock({
       status: 201,
       body: { message: "New department have been created", department: 3 },
     });
     const client = new VCRClient("k", { fetch: fetchMock });
 
-    const result = await client.createDepartment({ taxRegime: "vat" });
+    const result = await client.createDepartment({
+      taxRegime: "vat",
+      title: {
+        value: { hy: "Մթերք", ru: "Продукты", en: "Groceries" },
+        localizationStrategy: "translation",
+      },
+    });
 
     expect(result.department).toBe(3);
     const call = fetchMock.calls[0];
     expect(call?.url).toBe(`${DEFAULT_API_URL}/departments`);
     const sentBody = JSON.parse(call?.body ?? "{}");
     expect(sentBody.taxRegime).toBe("vat");
+    expect(sentBody.title).toEqual({
+      value: { hy: "Մթերք", ru: "Продукты", en: "Groceries" },
+      localizationStrategy: "translation",
+    });
   });
 
   it("propagates 502 SRC failures as VCRApiError", async () => {
@@ -116,7 +126,15 @@ describe("VCRClient.createDepartment", () => {
     });
     const client = new VCRClient("k", { fetch: fetchMock });
 
-    const error = await client.createDepartment({ taxRegime: "vat" }).catch((e) => e);
+    const error = await client
+      .createDepartment({
+        taxRegime: "vat",
+        title: {
+          value: { hy: "Մթերք" },
+          localizationStrategy: "transliteration",
+        },
+      })
+      .catch((e) => e);
 
     expect(error.kind).toBe("api");
     expect(error.status).toBe(502);
