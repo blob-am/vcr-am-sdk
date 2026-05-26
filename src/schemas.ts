@@ -184,6 +184,11 @@ const prepaymentRefundPickSchema = z.object({
   receipt: receiptPickSchema.nullable(),
 });
 
+// `open` — remaining > 0; can still be applied or refunded.
+// `consumed` — fully applied to subsequent sales.
+// `refunded` — a PrepaymentRefund row exists (always full per AM Annex 3 §29).
+export const prepaymentStateSchema = z.enum(["open", "consumed", "refunded"]);
+
 export const prepaymentDetailResponseSchema = z.object({
   id: z.number().int().nonnegative(),
   createdAt: isoDateTimeSchema,
@@ -193,6 +198,39 @@ export const prepaymentDetailResponseSchema = z.object({
   receipt: receiptPickSchema.nullable(),
   refund: prepaymentRefundPickSchema.nullable(),
   cashier: cashierPickSchema,
+  /** SUM(amount) across all ledger rows for this prepayment. */
+  remaining: z.number(),
+  state: prepaymentStateSchema,
+});
+
+export const prepaymentListItemSchema = z.object({
+  id: z.number().int().nonnegative(),
+  createdAt: isoDateTimeSchema,
+  buyerTin: z.string().nullable(),
+  cashAmount: z.number(),
+  nonCashAmount: z.number(),
+  remaining: z.number(),
+  state: prepaymentStateSchema,
+});
+
+export const prepaymentListResponseSchema = z.array(prepaymentListItemSchema);
+
+const customerOpenPrepaymentSchema = z.object({
+  prepaymentId: z.number().int().nonnegative(),
+  createdAt: isoDateTimeSchema,
+  cashAmount: z.number(),
+  nonCashAmount: z.number(),
+  buyerTin: z.string().nullable(),
+  remaining: z.number(),
+});
+
+export const customerPrepaymentBalanceResponseSchema = z.object({
+  entityId: z.number().int().nonnegative(),
+  customerRef: z.string(),
+  /** Total remaining across all open prepayments matching customerRef. */
+  balance: z.number(),
+  /** FIFO-ordered open prepayments contributing to the balance. */
+  openPrepayments: z.array(customerOpenPrepaymentSchema),
 });
 
 // ─── Inferred types ─────────────────────────────────────────────────────────
@@ -210,3 +248,6 @@ export type CashierListItem = z.infer<typeof cashierListItemSchema>;
 export type ClassifierSearchItem = z.infer<typeof classifierSearchItemSchema>;
 export type SaleDetail = z.infer<typeof saleDetailResponseSchema>;
 export type PrepaymentDetail = z.infer<typeof prepaymentDetailResponseSchema>;
+export type PrepaymentListItem = z.infer<typeof prepaymentListItemSchema>;
+export type PrepaymentState = z.infer<typeof prepaymentStateSchema>;
+export type CustomerPrepaymentBalance = z.infer<typeof customerPrepaymentBalanceResponseSchema>;

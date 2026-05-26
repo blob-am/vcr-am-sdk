@@ -2,6 +2,18 @@
 
 All notable changes to `@blob-solutions/vcr-am-sdk`. The format is loosely based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project follows [Semantic Versioning](https://semver.org/).
 
+## [0.12.0] — 2026-05-26
+
+### Added
+
+- `listPrepayments({ customerRef?, state? })` — wraps `GET /prepayments`. Returns up to 500 rows; each item carries the ledger-derived `remaining` and `state` (`open` / `consumed` / `refunded`). `state: "all"` is accepted as an explicit no-op filter.
+- `getCustomerPrepaymentBalance({ customerRef })` — wraps `GET /prepayments/balance`. Returns the open balance for that customer, scoped to the BusinessEntity that owns the calling VCR's API key, plus the FIFO-ordered list of contributing open prepayments.
+- New exported types: `PrepaymentListItem`, `PrepaymentState`, `CustomerPrepaymentBalance`, `ListPrepaymentsFilter`. New exported schemas: `prepaymentListItemSchema`, `prepaymentListResponseSchema`, `prepaymentStateSchema`, `customerPrepaymentBalanceResponseSchema`.
+
+### Changed
+
+- `PrepaymentDetail` (the `getPrepayment` response) now includes `remaining: number` and `state: PrepaymentState`. The server has been sending these since the ledger landed; the SDK schema is catching up. Strictly additive — existing consumers keep working.
+
 ## [0.11.0] — 2026-05-13
 
 ### Breaking

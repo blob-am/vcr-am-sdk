@@ -7,13 +7,18 @@ import {
   type CreateCashierResponse,
   type CreateDepartmentResponse,
   type CreateOfferResponse,
+  type CustomerPrepaymentBalance,
   cashierListResponseSchema,
   classifierSearchResponseSchema,
   createCashierResponseSchema,
   createDepartmentResponseSchema,
   createOfferResponseSchema,
+  customerPrepaymentBalanceResponseSchema,
   type PrepaymentDetail,
+  type PrepaymentListItem,
+  type PrepaymentState,
   prepaymentDetailResponseSchema,
+  prepaymentListResponseSchema,
   type RegisterPrepaymentRefundResponse,
   type RegisterPrepaymentResponse,
   type RegisterSaleRefundResponse,
@@ -37,6 +42,16 @@ import type {
   RegisterSaleRefundInput,
   SearchClassifierInput,
 } from "./types";
+
+export type ListPrepaymentsFilter = {
+  /** Exact-match filter against ledger.customerRef (TIN / phone / email). */
+  customerRef?: string;
+  /**
+   * Filter by derived lifecycle state. `all` (the default) returns every
+   * prepayment; the other values filter to a single lifecycle stage.
+   */
+  state?: PrepaymentState | "all";
+};
 
 export type VCRClientOptions = {
   /** Base URL for the VCR API. Defaults to https://vcr.am/api/v1. */
@@ -128,6 +143,56 @@ export class VCRClient {
       registerPrepaymentRefundResponseSchema,
       data,
       options,
+    );
+  }
+
+  /**
+   * List prepayments registered through the calling VCR. Server caps the
+   * response at 500 rows; for larger sets, narrow with `customerRef` or
+   * paginate by `id` outside the SDK.
+   *
+   * `remaining` and `state` are derived from the ledger — call this whenever
+   * you want a current snapshot rather than caching the result.
+   */
+  listPrepayments(
+    filter: ListPrepaymentsFilter = {},
+    options: RequestOptions = {},
+  ): Promise<PrepaymentListItem[]> {
+    const query: Record<string, string> = {};
+    if (filter.customerRef !== undefined) query["customerRef"] = filter.customerRef;
+    if (filter.state !== undefined) query["state"] = filter.state;
+    return this.#json(
+      "GET",
+      "/prepayments",
+      prepaymentListResponseSchema,
+      undefined,
+      options,
+      Object.keys(query).length > 0 ? query : undefined,
+    );
+  }
+
+  /**
+   * Get a customer's open prepayment balance scoped to the BusinessEntity
+   * that owns the calling VCR's API key. Because the ledger is entity-scoped,
+   * the result reflects deposits made through any VCR belonging to the same
+   * entity — merchants who run more than one VCR see a single wallet.
+   *
+   * `customerRef` is matched exactly against the ledger — typically a TIN,
+   * normalized E.164 phone, or lowercased email. Use whichever identifier the
+   * customer gave at deposit time; identities are not auto-merged across
+   * different ref types.
+   */
+  getCustomerPrepaymentBalance(
+    input: { customerRef: string },
+    options: RequestOptions = {},
+  ): Promise<CustomerPrepaymentBalance> {
+    return this.#json(
+      "GET",
+      "/prepayments/balance",
+      customerPrepaymentBalanceResponseSchema,
+      undefined,
+      options,
+      { customerRef: input.customerRef },
     );
   }
 

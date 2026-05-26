@@ -17,6 +17,8 @@ const PREPAYMENT_DETAIL = {
     deskId: "12345678901234567890ab",
     name: [{ id: 1, language: "hy" as const, content: "Անուն" }],
   },
+  remaining: 500,
+  state: "open" as const,
 };
 
 describe("VCRClient.registerPrepayment", () => {
@@ -64,6 +66,93 @@ describe("VCRClient.getPrepayment", () => {
     const fetchMock = makeFetchMock({ body: PREPAYMENT_DETAIL });
     const client = new VCRClient("k", { fetch: fetchMock });
     expect(() => client.getPrepayment(7.5)).toThrow(/non-negative integer/);
+  });
+});
+
+describe("VCRClient.listPrepayments", () => {
+  it("GETs /prepayments without query when no filter is given", async () => {
+    const fetchMock = makeFetchMock({ body: [] });
+    const client = new VCRClient("k", { fetch: fetchMock });
+
+    const result = await client.listPrepayments();
+
+    expect(result).toEqual([]);
+    expect(fetchMock.calls[0]?.url).toBe(`${DEFAULT_API_URL}/prepayments`);
+  });
+
+  it("appends customerRef + state to the query when provided", async () => {
+    const fetchMock = makeFetchMock({
+      body: [
+        {
+          id: 11,
+          createdAt: "2026-04-15T12:34:56.789Z",
+          buyerTin: "01234567",
+          cashAmount: 1000,
+          nonCashAmount: 0,
+          remaining: 600,
+          state: "open",
+        },
+      ],
+    });
+    const client = new VCRClient("k", { fetch: fetchMock });
+
+    const result = await client.listPrepayments({
+      customerRef: "01234567",
+      state: "open",
+    });
+
+    expect(result).toHaveLength(1);
+    expect(result[0]?.state).toBe("open");
+    expect(result[0]?.remaining).toBe(600);
+
+    const call = fetchMock.calls[0];
+    const url = new URL(call?.url ?? "");
+    expect(url.pathname.endsWith("/prepayments")).toBe(true);
+    expect(url.searchParams.get("customerRef")).toBe("01234567");
+    expect(url.searchParams.get("state")).toBe("open");
+  });
+});
+
+describe("VCRClient.getCustomerPrepaymentBalance", () => {
+  it("GETs /prepayments/balance with customerRef", async () => {
+    const fetchMock = makeFetchMock({
+      body: {
+        entityId: 42,
+        customerRef: "01234567",
+        balance: 1500,
+        openPrepayments: [
+          {
+            prepaymentId: 11,
+            createdAt: "2026-04-15T12:34:56.789Z",
+            cashAmount: 1000,
+            nonCashAmount: 0,
+            buyerTin: "01234567",
+            remaining: 600,
+          },
+          {
+            prepaymentId: 12,
+            createdAt: "2026-04-16T08:00:00.000Z",
+            cashAmount: 0,
+            nonCashAmount: 900,
+            buyerTin: "01234567",
+            remaining: 900,
+          },
+        ],
+      },
+    });
+    const client = new VCRClient("k", { fetch: fetchMock });
+
+    const result = await client.getCustomerPrepaymentBalance({
+      customerRef: "01234567",
+    });
+
+    expect(result.balance).toBe(1500);
+    expect(result.openPrepayments).toHaveLength(2);
+    expect(result.openPrepayments[0]?.prepaymentId).toBe(11);
+
+    const url = new URL(fetchMock.calls[0]?.url ?? "");
+    expect(url.pathname.endsWith("/prepayments/balance")).toBe(true);
+    expect(url.searchParams.get("customerRef")).toBe("01234567");
   });
 });
 

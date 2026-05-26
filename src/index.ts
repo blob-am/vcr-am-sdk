@@ -1,4 +1,8 @@
-export { VCRClient, type VCRClientOptions } from "./client";
+export {
+  type ListPrepaymentsFilter,
+  VCRClient,
+  type VCRClientOptions,
+} from "./client";
 export * from "./constants";
 export {
   type ApiErrorBody,
@@ -15,6 +19,7 @@ export {
   type CreateCashierResponse,
   type CreateDepartmentResponse,
   type CreateOfferResponse,
+  type CustomerPrepaymentBalance,
   cashierListItemSchema,
   cashierListResponseSchema,
   classifierSearchItemSchema,
@@ -22,8 +27,14 @@ export {
   createCashierResponseSchema,
   createDepartmentResponseSchema,
   createOfferResponseSchema,
+  customerPrepaymentBalanceResponseSchema,
   type PrepaymentDetail,
+  type PrepaymentListItem,
+  type PrepaymentState,
   prepaymentDetailResponseSchema,
+  prepaymentListItemSchema,
+  prepaymentListResponseSchema,
+  prepaymentStateSchema,
   type RegisterPrepaymentRefundResponse,
   type RegisterPrepaymentResponse,
   type RegisterSaleRefundResponse,
