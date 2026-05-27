@@ -90,6 +90,54 @@ describe("VCRClient.createOffer", () => {
   });
 });
 
+describe("VCRClient.listDepartments", () => {
+  it("GETs /departments and parses tax regime + localized title", async () => {
+    const fetchMock = makeFetchMock({
+      body: [
+        {
+          internalId: 1,
+          externalId: "dept-groceries",
+          taxRegime: "vat",
+          title: {
+            hy: { id: 100, language: "hy", content: "Մթերք" },
+            ru: { id: 101, language: "ru", content: "Продукты" },
+            en: { id: 102, language: "en", content: "Groceries" },
+          },
+        },
+        {
+          internalId: 2,
+          externalId: null,
+          taxRegime: "turnover_tax",
+          title: {
+            hy: { id: 103, language: "hy", content: "Ծառայություն" },
+          },
+        },
+      ],
+    });
+    const client = new VCRClient("k", { fetch: fetchMock });
+
+    const result = await client.listDepartments();
+
+    expect(result).toHaveLength(2);
+    expect(result[0]?.internalId).toBe(1);
+    expect(result[0]?.externalId).toBe("dept-groceries");
+    expect(result[0]?.taxRegime).toBe("vat");
+    expect(result[0]?.title["hy"]?.content).toBe("Մթերք");
+    expect(result[1]?.externalId).toBeNull();
+    expect(result[1]?.taxRegime).toBe("turnover_tax");
+
+    expect(fetchMock.calls[0]?.method).toBe("GET");
+    expect(fetchMock.calls[0]?.url).toBe(`${DEFAULT_API_URL}/departments`);
+  });
+
+  it("accepts an empty list", async () => {
+    const fetchMock = makeFetchMock({ body: [] });
+    const client = new VCRClient("k", { fetch: fetchMock });
+    const result = await client.listDepartments();
+    expect(result).toEqual([]);
+  });
+});
+
 describe("VCRClient.createDepartment", () => {
   it("POSTs to /departments with taxRegime and title", async () => {
     const fetchMock = makeFetchMock({

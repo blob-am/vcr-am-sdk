@@ -2,6 +2,13 @@
 
 All notable changes to `@blob-solutions/vcr-am-sdk`. The format is loosely based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project follows [Semantic Versioning](https://semver.org/).
 
+## [0.13.0] — 2026-05-27
+
+### Added
+
+- `listDepartments()` — wraps `GET /departments`. Returns `DepartmentListItem[]` with `internalId`, `externalId`, `taxRegime`, and the localized `title`. Only departments confirmed by the tax service are included, so each `internalId` is safe to reference from a sale item's `department.id`. Closes the gap where the SDK could create departments but not list them.
+- New exported types: `DepartmentListItem`. New exported schemas: `departmentListItemSchema`, `departmentListResponseSchema`.
+
 ## [0.12.0] — 2026-05-26
 
 ### Added

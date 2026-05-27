@@ -14,6 +14,8 @@ import {
   createDepartmentResponseSchema,
   createOfferResponseSchema,
   customerPrepaymentBalanceResponseSchema,
+  type DepartmentListItem,
+  departmentListResponseSchema,
   type PrepaymentDetail,
   type PrepaymentListItem,
   type PrepaymentState,
@@ -220,6 +222,17 @@ export class VCRClient {
     options: RequestOptions = {},
   ): Promise<CreateDepartmentResponse> {
     return this.#json("POST", "/departments", createDepartmentResponseSchema, data, options);
+  }
+
+  /**
+   * List departments configured on the calling VCR — `internalId`,
+   * `externalId`, `taxRegime`, and the localized `title`. Mirrors the
+   * dashboard catalog: only departments confirmed by the tax service are
+   * returned, so the `internalId` field is safe to reference from a sale
+   * item's `department.id`.
+   */
+  listDepartments(options: RequestOptions = {}): Promise<DepartmentListItem[]> {
+    return this.#json("GET", "/departments", departmentListResponseSchema, undefined, options);
   }
 
   // ─── Classifier search ────────────────────────────────────────────────────

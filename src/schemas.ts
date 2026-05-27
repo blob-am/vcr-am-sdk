@@ -98,6 +98,18 @@ export const cashierListItemSchema = z.object({
 
 export const cashierListResponseSchema = z.array(cashierListItemSchema);
 
+export const departmentListItemSchema = z.object({
+  internalId: z.number().int().nonnegative(),
+  externalId: z.string().nullable(),
+  taxRegime: taxRegimeSchema,
+  // Map from language code -> { language, content }, matching the wire
+  // format produced by makeLocalizationObject on the server. May be empty
+  // for legacy departments created before titles were mandatory.
+  title: z.record(z.string(), localizationEntrySchema),
+});
+
+export const departmentListResponseSchema = z.array(departmentListItemSchema);
+
 export const classifierSearchItemSchema = z.object({
   code: z.string(),
   // Optional: server may emit `{ code }` without `title` when the classifier
@@ -251,3 +263,4 @@ export type PrepaymentDetail = z.infer<typeof prepaymentDetailResponseSchema>;
 export type PrepaymentListItem = z.infer<typeof prepaymentListItemSchema>;
 export type PrepaymentState = z.infer<typeof prepaymentStateSchema>;
 export type CustomerPrepaymentBalance = z.infer<typeof customerPrepaymentBalanceResponseSchema>;
+export type DepartmentListItem = z.infer<typeof departmentListItemSchema>;
