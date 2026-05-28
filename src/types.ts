@@ -78,12 +78,29 @@ export type SendReceiptToBuyer = {
   language: Language;
 };
 
-type IndividualBuyer = {
+/**
+ * Buyer contact captures used by the desk-side prepayment lookup banner.
+ * Independent of {@link SendReceiptToBuyer}: a buyer can be reachable for
+ * later lookup without receiving an emailed receipt now. When both
+ * `email` and `receipt.email` are present, the server treats `email` as
+ * the canonical buyer identity and `receipt.email` as just the delivery
+ * target (they may legitimately differ).
+ *
+ * `phone` must be E.164 ("+37491234567"). Plain Armenian local format
+ * is not accepted at the API boundary — clients should parse with
+ * libphonenumber before sending.
+ */
+type BuyerContact = {
+  email?: string;
+  phone?: string;
+};
+
+type IndividualBuyer = BuyerContact & {
   type: "individual";
   receipt?: SendReceiptToBuyer;
 };
 
-type LegalEntityBuyer = {
+type LegalEntityBuyer = BuyerContact & {
   type: "business_entity";
   tin: string;
   receipt?: SendReceiptToBuyer;
