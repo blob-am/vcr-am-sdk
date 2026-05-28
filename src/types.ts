@@ -82,9 +82,9 @@ export type SendReceiptToBuyer = {
  * Buyer contact captures used by the desk-side prepayment lookup banner.
  * Independent of {@link SendReceiptToBuyer}: a buyer can be reachable for
  * later lookup without receiving an emailed receipt now. When both
- * `email` and `receipt.email` are present, the server treats `email` as
- * the canonical buyer identity and `receipt.email` as just the delivery
- * target (they may legitimately differ).
+ * `email` and `receipt.email` are present, the server stores `email` for
+ * lookup and uses `receipt.email` only for delivery (they may
+ * legitimately differ — personal vs billing).
  *
  * `phone` must be E.164 ("+37491234567"). Plain Armenian local format
  * is not accepted at the API boundary — clients should parse with
