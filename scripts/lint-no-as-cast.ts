@@ -38,9 +38,23 @@ function* walk(dir: string): Generator<string> {
   }
 }
 
+// Replace every char inside a /* ... */ block with a space — newlines kept
+// so line/column numbers in findings stay accurate. Run on the whole file
+// BEFORE splitting into lines, because block comments (including JSDoc)
+// span multiple lines and per-line stripping can't see them. Without this
+// the regex was matching "as Foo" inside docstrings — see the
+// 2026-05-28 CI failure on vcr-am-sdk for the original trigger.
+function maskBlockComments(source: string): string {
+  return source.replace(/\/\*[\s\S]*?\*\//g, (block) =>
+    block.replace(/[^\n]/g, " "),
+  );
+}
+
 function scan(file: string): Finding[] {
   const findings: Finding[] = [];
-  const lines = readFileSync(file, "utf8").split("\n");
+  const source = readFileSync(file, "utf8");
+  const lines = maskBlockComments(source).split("\n");
+  const originalLines = source.split("\n");
   lines.forEach((line, lineIdx) => {
     // Strip line comments and string literals to avoid false positives on
     // doc strings that mention `as Foo`.
@@ -57,7 +71,9 @@ function scan(file: string): Finding[] {
         file,
         line: lineIdx + 1,
         column: match.index + 1,
-        snippet: line.trim(),
+        // Show the ORIGINAL line (not the masked one) so the snippet is
+        // readable in error output.
+        snippet: (originalLines[lineIdx] ?? line).trim(),
       });
       match = AS_CAST.exec(code);
     }
