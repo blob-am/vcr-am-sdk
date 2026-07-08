@@ -161,3 +161,39 @@ describe("VCRClient.registerSale (regression)", () => {
     expect(sent.amount.prePayment).toBeUndefined();
   });
 });
+
+describe("VCRClient.registerSale (foreign currency + eMarks)", () => {
+  it("sends currencyConversion, per-item emarks, and an offer-by-id on the wire", async () => {
+    const fetchMock = makeFetchMock({ body: VALID_SALE_RESPONSE });
+    const client = new VCRClient("k", { fetch: fetchMock });
+
+    await client.registerSale({
+      cashier: { id: 1 },
+      items: [
+        {
+          offer: { id: 5 },
+          department: { id: 1 },
+          quantity: "1",
+          price: "4000",
+          unit: "pc",
+          emarks: ["0104607800000000215abcDEF12345"],
+        },
+      ],
+      currencyConversion: {
+        currency: "USD",
+        ratePerUnit: "400",
+        rateDate: "2026-07-07",
+        lines: [{ foreignUnitPrice: "10" }],
+      },
+      amount: { cash: "4000" },
+      buyer: { type: "individual" },
+    });
+
+    const sent = JSON.parse(fetchMock.calls[0]?.body ?? "{}");
+    expect(sent.currencyConversion.currency).toBe("USD");
+    expect(sent.currencyConversion.ratePerUnit).toBe("400");
+    expect(sent.currencyConversion.lines).toEqual([{ foreignUnitPrice: "10" }]);
+    expect(sent.items[0].emarks).toEqual(["0104607800000000215abcDEF12345"]);
+    expect(sent.items[0].offer).toEqual({ id: 5 });
+  });
+});

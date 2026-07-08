@@ -16,6 +16,9 @@ import {
   customerPrepaymentBalanceResponseSchema,
   type DepartmentListItem,
   departmentListResponseSchema,
+  type OfferListItem,
+  offerListItemSchema,
+  offerListResponseSchema,
   type PrepaymentDetail,
   type PrepaymentListItem,
   type PrepaymentState,
@@ -31,6 +34,8 @@ import {
   registerSaleResponseSchema,
   type SaleDetail,
   saleDetailResponseSchema,
+  type Whoami,
+  whoamiResponseSchema,
 } from "./schemas";
 import type {
   ClassifierType,
@@ -38,11 +43,13 @@ import type {
   CreateDepartmentInput,
   CreateOfferInput,
   Language,
+  ListOffersFilter,
   RegisterPrepaymentInput,
   RegisterPrepaymentRefundInput,
   RegisterSaleInput,
   RegisterSaleRefundInput,
   SearchClassifierInput,
+  UpdateOfferInput,
 } from "./types";
 
 export type ListPrepaymentsFilter = {
@@ -64,7 +71,7 @@ export type VCRClientOptions = {
   timeoutMs?: number | null;
 };
 
-type Method = "GET" | "POST";
+type Method = "GET" | "POST" | "PATCH";
 
 export class VCRClient {
   readonly #apiKey: string;
@@ -92,6 +99,19 @@ export class VCRClient {
 
     this.#defaultTimeoutMs =
       options.timeoutMs === undefined ? DEFAULT_TIMEOUT_MS : options.timeoutMs;
+  }
+
+  // ─── Account ──────────────────────────────────────────────────────────────
+
+  /**
+   * Resolve which VCR the calling API key belongs to. Returns the register's
+   * identity, its `mode` (`production` / `sandbox`), and the owning business
+   * entity. Works on freshly-imported VCRs that have not been activated yet
+   * (in which case `crn` is `null`) — handy as a cheap SDK health-check and to
+   * tell production keys apart from sandbox ones.
+   */
+  whoami(options: RequestOptions = {}): Promise<Whoami> {
+    return this.#json("GET", "/whoami", whoamiResponseSchema, undefined, options);
   }
 
   // ─── Sales ─────────────────────────────────────────────────────────────────
@@ -215,6 +235,54 @@ export class VCRClient {
 
   createOffer(data: CreateOfferInput, options: RequestOptions = {}): Promise<CreateOfferResponse> {
     return this.#json("POST", "/offers", createOfferResponseSchema, data, options);
+  }
+
+  /**
+   * List offers belonging to the calling VCR. Server caps the response at 500
+   * rows; narrow with `externalId` / `type` for larger catalogs. Archived
+   * offers are excluded unless `includeArchived` is set.
+   *
+   * A common use is checking whether an offer already exists (by `externalId`)
+   * before creating it.
+   */
+  listOffers(
+    filter: ListOffersFilter = {},
+    options: RequestOptions = {},
+  ): Promise<OfferListItem[]> {
+    const query: Record<string, string> = {};
+    if (filter.externalId !== undefined) query["externalId"] = filter.externalId;
+    if (filter.type !== undefined) query["type"] = filter.type;
+    if (filter.includeArchived !== undefined) {
+      query["includeArchived"] = filter.includeArchived ? "true" : "false";
+    }
+    return this.#json(
+      "GET",
+      "/offers",
+      offerListResponseSchema,
+      undefined,
+      options,
+      Object.keys(query).length > 0 ? query : undefined,
+    );
+  }
+
+  getOffer(offerId: number, options: RequestOptions = {}): Promise<OfferListItem> {
+    assertNonNegativeInt(offerId, "offerId");
+    return this.#json("GET", `/offers/${offerId}`, offerListItemSchema, undefined, options);
+  }
+
+  /**
+   * Rename an offer's title. Affects only future receipts — already-issued
+   * receipts keep the title they were created with, and the SRC fiscal record
+   * is unchanged. Missing `en`/`ru` are filled per `localizationStrategy`,
+   * exactly as on offer creation. Returns the updated offer.
+   */
+  updateOffer(
+    offerId: number,
+    data: UpdateOfferInput,
+    options: RequestOptions = {},
+  ): Promise<OfferListItem> {
+    assertNonNegativeInt(offerId, "offerId");
+    return this.#json("PATCH", `/offers/${offerId}`, offerListItemSchema, data, options);
   }
 
   createDepartment(

@@ -19,6 +19,7 @@ Official TypeScript / JavaScript SDK for the [VCR.AM](https://vcr.am) Virtual Ca
 - [Quick start](#quick-start)
 - [Configuration](#configuration)
 - [API reference](#api-reference)
+  - [Account](#account)
   - [Sales](#sales)
   - [Prepayments](#prepayments)
   - [Cashiers](#cashiers)
@@ -93,6 +94,19 @@ await vcr.registerSale(sale, {
 
 Every method returns a typed, schema-validated response and accepts an optional `RequestOptions` (`{ signal?, timeoutMs? }`) as its last argument.
 
+### Account
+
+| Method       | Endpoint      | Returns  |
+| ------------ | ------------- | -------- |
+| `whoami()`   | `GET /whoami` | `Whoami` |
+
+`whoami()` resolves which VCR the API key belongs to and whether it is a `production` or `sandbox` key — a cheap health-check. It works on freshly-imported registers that have not been activated yet (`crn` is `null` in that case).
+
+```typescript
+const me = await vcr.whoami();
+console.log(me.vcrId, me.mode, me.businessEntity.tin);
+```
+
 ### Sales
 
 | Method                      | Endpoint            | Returns                       |
@@ -111,13 +125,38 @@ const refund = await vcr.registerSaleRefund({
 });
 ```
 
+**eMark codes** (marked goods, Govt Decision 1976-N) go on each sale item as `emarks: string[]`; the same codes are echoed on refund items.
+
+**Foreign-currency sales** (HO-234-N): pass a `currencyConversion` block alongside the AMD `items`. VCR re-resolves the previous-business-day CBA rate and rejects the sale if the rate you sent is stale. The AMD `price` values in `items[]` remain the authoritative fiscal figures.
+
+```typescript
+await vcr.registerSale({
+  cashier: { id: 1 },
+  items: [
+    { offer: { id: 5 }, department: { id: 1 }, quantity: "1", price: "4000", unit: "pc" },
+  ],
+  currencyConversion: {
+    currency: "USD",          // ISO 4217; not AMD
+    ratePerUnit: "400",       // AMD per 1 USD (CBA, previous business day)
+    rateDate: "2026-07-07",   // YYYY-MM-DD
+    lines: [{ foreignUnitPrice: "10" }], // index-aligned to items[]
+  },
+  amount: { cash: "4000" },
+  buyer: { type: "individual" },
+});
+```
+
 ### Prepayments
 
-| Method                            | Endpoint                  | Returns                              |
-| --------------------------------- | ------------------------- | ------------------------------------ |
-| `registerPrepayment(input)`       | `POST /prepayments`       | `RegisterPrepaymentResponse`         |
-| `getPrepayment(id)`               | `GET /prepayments/{id}`   | `PrepaymentDetail`                   |
-| `registerPrepaymentRefund(input)` | `POST /prepayments/refund`| `RegisterPrepaymentRefundResponse`   |
+| Method                                     | Endpoint                     | Returns                            |
+| ------------------------------------------ | ---------------------------- | ---------------------------------- |
+| `registerPrepayment(input)`                | `POST /prepayments`          | `RegisterPrepaymentResponse`       |
+| `getPrepayment(id)`                        | `GET /prepayments/{id}`      | `PrepaymentDetail`                 |
+| `registerPrepaymentRefund(input)`          | `POST /prepayments/refund`   | `RegisterPrepaymentRefundResponse` |
+| `listPrepayments(filter?)`                 | `GET /prepayments`           | `PrepaymentListItem[]`             |
+| `getCustomerPrepaymentBalance({ ... })`    | `GET /prepayments/balance`   | `CustomerPrepaymentBalance`        |
+
+`listPrepayments({ customerRef?, state? })` returns up to 500 rows, each carrying the ledger-derived `remaining` and `state` (`open` / `consumed` / `refunded`). `getCustomerPrepaymentBalance({ customerRef })` returns the customer's open balance, scoped to the business entity that owns the calling VCR's key.
 
 ### Cashiers
 
@@ -138,10 +177,30 @@ const cashier = await vcr.createCashier({
 
 ### Offers and departments
 
-| Method                    | Endpoint             | Returns                     |
-| ------------------------- | -------------------- | --------------------------- |
-| `createOffer(input)`      | `POST /offers`       | `CreateOfferResponse`       |
-| `createDepartment(input)` | `POST /departments`  | `CreateDepartmentResponse`  |
+| Method                       | Endpoint             | Returns                    |
+| ---------------------------- | -------------------- | -------------------------- |
+| `createOffer(input)`         | `POST /offers`       | `CreateOfferResponse`      |
+| `listOffers(filter?)`        | `GET /offers`        | `OfferListItem[]`          |
+| `getOffer(id)`               | `GET /offers/{id}`   | `OfferListItem`            |
+| `updateOffer(id, { title })` | `PATCH /offers/{id}` | `OfferListItem`            |
+| `createDepartment(input)`    | `POST /departments`  | `CreateDepartmentResponse` |
+| `listDepartments()`          | `GET /departments`   | `DepartmentListItem[]`     |
+
+`listOffers({ externalId?, type?, includeArchived? })` is handy for checking whether an offer already exists (by `externalId`) before creating it. `updateOffer` renames an offer's title going forward — already-issued receipts are unchanged. Offer titles use the canonical `OfferTitle` shape (`{ type: "localized" | "universal", ... }`); `createOffer` also still accepts the deprecated legacy `{ value, localizationStrategy }` shape.
+
+```typescript
+const [existing] = await vcr.listOffers({ externalId: "sku-coffee" });
+if (existing === undefined) {
+  await vcr.createOffer({
+    type: "product",
+    classifierCode: "0901",
+    title: { type: "localized", content: { hy: "Սուրճ" }, localizationStrategy: "translation" },
+    defaultMeasureUnit: "pc",
+    defaultDepartment: { id: 1 },
+    externalId: "sku-coffee",
+  });
+}
+```
 
 ### Classifier search
 
@@ -203,7 +262,7 @@ The whole request flow — connection, body read, schema parse — is bounded by
 
 ## Idempotency and retries
 
-**The SDK does not retry.** This is intentional. The fiscal API does not currently support idempotency keys, so retrying a `registerSale` after a network blip can double-fiscalize a receipt. Implement application-level retry only on operations you have confirmed are safe to repeat (typically reads: `getSale`, `getPrepayment`, `listCashiers`, `searchClassifier`).
+**The SDK does not retry.** This is intentional. The fiscal API does not currently support idempotency keys, so retrying a `registerSale` after a network blip can double-fiscalize a receipt. Implement application-level retry only on operations you have confirmed are safe to repeat (typically reads: `whoami`, `getSale`, `getPrepayment`, `listPrepayments`, `listCashiers`, `listOffers`, `getOffer`, `listDepartments`, `searchClassifier`).
 
 ## Browser usage
 

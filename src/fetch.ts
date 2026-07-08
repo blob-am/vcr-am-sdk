@@ -100,6 +100,7 @@ function buildApiError(
     const body: ApiErrorBody = {
       error: parsed.data.error,
       ...(parsed.data.issues !== undefined && { issues: parsed.data.issues }),
+      ...(parsed.data.requestId !== undefined && { requestId: parsed.data.requestId }),
     };
     return new VCRApiError(status, body, url);
   }

@@ -13,6 +13,10 @@ export const apiErrorBodySchema = z.object({
       }),
     )
     .optional(),
+  // Server-generated correlation ID present on unexpected 5xx responses.
+  // Kept lenient (plain string, not `.uuid()`) so a malformed value can never
+  // make the error envelope fail to parse and mask the real API error.
+  requestId: z.string().optional(),
 });
 
 const isoDateTimeSchema = z
@@ -83,6 +87,20 @@ export const createDepartmentResponseSchema = z.object({
   department: z.number().int().nonnegative(),
 });
 
+// ─── Account ──────────────────────────────────────────────────────────────────
+
+export const whoamiResponseSchema = z.object({
+  vcrId: z.number().int().nonnegative(),
+  // `null` until the VCR is activated (freshly-imported registers have no CRN).
+  crn: z.string().nullable(),
+  mode: z.enum(["production", "sandbox"]),
+  tradingPlatformName: z.string(),
+  businessEntity: z.object({
+    tin: z.string(),
+    name: z.string(),
+  }),
+});
+
 // ─── List & search ──────────────────────────────────────────────────────────
 
 const cashierNameLocalizationSchema = z.object({
@@ -118,6 +136,25 @@ export const classifierSearchItemSchema = z.object({
 });
 
 export const classifierSearchResponseSchema = z.array(classifierSearchItemSchema);
+
+// Offer list/detail rows carry their title as an array of localization
+// entries (matching the detail endpoints), NOT the language-keyed record used
+// by the cashier / department lists.
+export const offerListItemSchema = z.object({
+  id: z.number().int().nonnegative(),
+  externalId: z.string().nullable(),
+  type: offerTypeSchema,
+  classifierCode: z.string(),
+  // Server types this as a plain string (not the unit enum) to stay faithful
+  // to whatever is stored; mirror it so a legacy unit can never fail parsing.
+  defaultMeasureUnit: z.string(),
+  defaultDepartment: z.object({ internalId: z.number().int().nonnegative() }),
+  title: z.array(localizationEntrySchema),
+  archivedAt: isoDateTimeSchema.nullable(),
+  createdAt: isoDateTimeSchema,
+});
+
+export const offerListResponseSchema = z.array(offerListItemSchema);
 
 // ─── Detail responses ───────────────────────────────────────────────────────
 //
@@ -258,6 +295,8 @@ export type CreateCashierResponse = z.infer<typeof createCashierResponseSchema>;
 export type CreateDepartmentResponse = z.infer<typeof createDepartmentResponseSchema>;
 export type CashierListItem = z.infer<typeof cashierListItemSchema>;
 export type ClassifierSearchItem = z.infer<typeof classifierSearchItemSchema>;
+export type Whoami = z.infer<typeof whoamiResponseSchema>;
+export type OfferListItem = z.infer<typeof offerListItemSchema>;
 export type SaleDetail = z.infer<typeof saleDetailResponseSchema>;
 export type PrepaymentDetail = z.infer<typeof prepaymentDetailResponseSchema>;
 export type PrepaymentListItem = z.infer<typeof prepaymentListItemSchema>;

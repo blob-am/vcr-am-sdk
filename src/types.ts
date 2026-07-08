@@ -28,7 +28,10 @@ export type Discounts = {
   additional?: AdditionalDiscount;
 };
 
-type ExistingOffer = { externalId: string };
+/** Reference an already-created offer by its merchant-provided external id. */
+type ExistingOfferByExternalId = { externalId: string };
+/** Reference an already-created offer by its VCR-internal numeric id. */
+type ExistingOfferById = { id: number };
 
 type LocalizedOfferTitle = {
   type: "localized";
@@ -41,6 +44,15 @@ type UniversalOfferTitle = {
   content: string;
 };
 
+/**
+ * Canonical offer-title shape shared by inline new offers (`registerSale`),
+ * `createOffer`, and `updateOffer`.
+ *
+ * - `universal` — one string treated as multi-language (brand names like
+ *   "Coca-Cola").
+ * - `localized` — per-language map (`hy` required; `en`/`ru` optional and
+ *   filled server-side per `localizationStrategy` when missing).
+ */
 export type OfferTitle = LocalizedOfferTitle | UniversalOfferTitle;
 
 export type DepartmentInput = { id: number };
@@ -54,7 +66,12 @@ export type NewOffer = {
   externalId: string;
 };
 
-export type Offer = NewOffer | ExistingOffer;
+/**
+ * A sale-item offer: a brand-new inline offer, or a reference to an existing
+ * one by `externalId` or by internal `id`. Mirrors the three wire shapes the
+ * server's `POST /sales` accepts.
+ */
+export type Offer = NewOffer | ExistingOfferByExternalId | ExistingOfferById;
 
 export type SaleItem = {
   offer: Offer;
@@ -64,6 +81,31 @@ export type SaleItem = {
   unit: Unit;
   discounts?: Discounts;
   totalAmountTolerance?: string;
+  /**
+   * eMark codes for this line (Govt Decision 1976-N, effective 2026-05-01).
+   * Omit or leave empty for unmarked goods. One entry per physical unit sold.
+   */
+  emarks?: string[];
+};
+
+/**
+ * Foreign-currency input trail (HO-234-N). Present only when the sale was
+ * entered in a non-AMD currency; omit it entirely for native-AMD sales.
+ *
+ * The AMD `price` values in `items[]` remain the authoritative fiscal figures.
+ * This block carries the raw foreign inputs plus the CBA rate the client used;
+ * the server re-resolves the previous-business-day rate and rejects the sale
+ * if the supplied rate is stale.
+ */
+export type CurrencyConversionInput = {
+  /** 3-letter ISO 4217 code (normalized to uppercase server-side). Not AMD. */
+  currency: string;
+  /** AMD per one unit of `currency` (CBA rate / amount). */
+  ratePerUnit: string;
+  /** Rate date in `YYYY-MM-DD` (CBA previous business day). */
+  rateDate: string;
+  /** Per-line foreign unit prices, index-aligned to `items[]`. At least one. */
+  lines: Array<{ foreignUnitPrice: string }>;
 };
 
 export type SaleAmount = RequireAtLeastOne<{
@@ -111,6 +153,11 @@ export type Buyer = IndividualBuyer | LegalEntityBuyer;
 export type RegisterSaleInput = {
   cashier: CashierId;
   items: SaleItem[];
+  /**
+   * Optional foreign-currency input. Absent => native-AMD sale, byte-identical
+   * to the pre-existing behaviour. See {@link CurrencyConversionInput}.
+   */
+  currencyConversion?: CurrencyConversionInput;
   amount: SaleAmount;
   buyer: Buyer;
 };
@@ -168,6 +215,24 @@ export type RegisterPrepaymentRefundInput = {
 
 export type LocalizedName = Partial<Record<Language, string>> & { hy: string };
 
+/**
+ * Legacy offer-title shape (`{ value, localizationStrategy }`) once required by
+ * `createOffer`.
+ *
+ * @deprecated since 0.14.0 — the server still accepts it but plans removal.
+ *   Prefer the canonical {@link OfferTitle} (`{ type: "localized", content,
+ *   localizationStrategy }` or `{ type: "universal", content }`), which is the
+ *   same shape used by inline offers and `updateOffer`, and additionally
+ *   supports `universal` (brand-name) titles.
+ */
+export type LegacyOfferTitle = {
+  value: LocalizedName;
+  localizationStrategy: "translation" | "transliteration";
+};
+
+/** Title accepted by {@link CreateOfferInput}: canonical or legacy shape. */
+export type CreateOfferTitle = OfferTitle | LegacyOfferTitle;
+
 export type CreateCashierInput = {
   name: {
     value: LocalizedName;
@@ -195,10 +260,7 @@ export type CreateDepartmentInput = {
 export type CreateOfferInputProduct = {
   type: "product";
   classifierCode: string;
-  title: {
-    value: LocalizedName;
-    localizationStrategy: "translation" | "transliteration";
-  };
+  title: CreateOfferTitle;
   defaultMeasureUnit: Unit;
   defaultDepartment: DepartmentInput;
   externalId?: string;
@@ -209,3 +271,18 @@ export type CreateOfferInputService = Omit<CreateOfferInputProduct, "type"> & {
 };
 
 export type CreateOfferInput = CreateOfferInputProduct | CreateOfferInputService;
+
+/** Body of {@link VCRClient.updateOffer} — a new title for an existing offer. */
+export type UpdateOfferInput = {
+  title: OfferTitle;
+};
+
+/** Filter for {@link VCRClient.listOffers}. */
+export type ListOffersFilter = {
+  /** Exact-match filter by merchant-provided `externalId`. */
+  externalId?: string;
+  /** Filter by offer type. */
+  type?: "product" | "service";
+  /** When true, also include archived offers. Defaults to false. */
+  includeArchived?: boolean;
+};

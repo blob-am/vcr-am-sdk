@@ -9,6 +9,12 @@ export type ApiErrorIssue = {
 export type ApiErrorBody = {
   error: string;
   issues?: Array<ApiErrorIssue>;
+  /**
+   * Server-generated correlation ID, present on unexpected 5xx responses.
+   * Include it when reporting the issue to support so the matching log entry
+   * and Sentry event can be located.
+   */
+  requestId?: string;
 };
 
 /**

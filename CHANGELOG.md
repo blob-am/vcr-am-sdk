@@ -2,6 +2,27 @@
 
 All notable changes to `@blob-solutions/vcr-am-sdk`. The format is loosely based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project follows [Semantic Versioning](https://semver.org/).
 
+## [0.14.0] — 2026-07-08
+
+Closes the drift that had accumulated against `/api/v1` since 0.13.0. Everything here is additive — no call-site changes required.
+
+### Added
+
+- `whoami()` — wraps `GET /whoami`. Returns `{ vcrId, crn, mode, tradingPlatformName, businessEntity }`, where `mode` is `"production"` / `"sandbox"` and `crn` is `null` for imported-but-not-yet-activated VCRs. Useful as a cheap SDK health-check and for telling production keys apart from sandbox ones. New type `Whoami`, new schema `whoamiResponseSchema`.
+- `listOffers({ externalId?, type?, includeArchived? })` — wraps `GET /offers`. Returns up to 500 `OfferListItem[]`. Check whether an offer already exists (by `externalId`) before creating it.
+- `getOffer(id)` — wraps `GET /offers/{id}`. Returns a single `OfferListItem`.
+- `updateOffer(id, { title })` — wraps `PATCH /offers/{id}`. Renames an offer's title going forward; already-issued receipts and the SRC fiscal record are unchanged. Accepts the canonical `OfferTitle` (`localized` / `universal`).
+- New types `OfferListItem`, `ListOffersFilter`, `UpdateOfferInput`, `CurrencyConversionInput`; new schemas `offerListItemSchema`, `offerListResponseSchema`.
+- `RegisterSaleInput.currencyConversion?` — foreign-currency sales (HO-234-N). Enter the sale in USD/EUR/RUB etc.; VCR converts to AMD at the previous-business-day CBA rate and rejects a stale rate. The AMD `price` values in `items[]` stay authoritative.
+- `SaleItem.emarks?: string[]` — per-line eMark codes for marked goods (Govt Decision 1976-N). Previously only refund items could carry eMarks.
+- `Offer` (sale-item offer) gained the by-internal-id reference shape `{ id: number }`, alongside the existing new-offer and `{ externalId }` shapes.
+- `VCRApiError.body.requestId` — the server's 5xx correlation ID is now preserved instead of being stripped. Include it when contacting support.
+
+### Changed
+
+- `CreateOfferInput.title` now also accepts the canonical `OfferTitle` shape (`{ type: "localized" | "universal", ... }`), unifying it with inline sale offers and `updateOffer`, and unlocking `universal` (brand-name) titles. The legacy `{ value, localizationStrategy }` shape (now typed as `LegacyOfferTitle`) still works but is **deprecated** — the server plans to drop it.
+- Dependency refresh: `zod` `^4.4.1` → `^4.4.3`. Dev tooling bumped (`vite` `^8.0.10` → `^8.1.3`, clearing two Windows-only dev-server advisories; `@biomejs/biome`, `vitest`, `@vitest/coverage-v8`, `publint`, `@arethetypeswrong/cli`). An `esbuild` `>=0.28.1` override clears a low-severity build-time advisory. None of these ship in the published package.
+
 ## [0.13.0] — 2026-05-27
 
 ### Added
