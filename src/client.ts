@@ -16,6 +16,8 @@ import {
   customerPrepaymentBalanceResponseSchema,
   type DepartmentListItem,
   departmentListResponseSchema,
+  type ExchangeRate,
+  exchangeRateResponseSchema,
   type OfferListItem,
   offerListItemSchema,
   offerListResponseSchema,
@@ -331,6 +333,28 @@ export class VCRClient {
     options: RequestOptions = {},
   ): Promise<ClassifierSearchItem[]> {
     return this.searchClassifier({ query, type, language }, options);
+  }
+
+  // ─── Exchange rate ────────────────────────────────────────────────────────
+
+  /**
+   * Preview the AMD conversion rate VCR would apply to a foreign-currency sale
+   * registered now — the CBA mid-market rate published on the previous business
+   * day (Tax Code art. 16, HO-234-N). Use it to show a buyer the AMD equivalent
+   * before charging. The sale itself is converted server-side from each item's
+   * `currency` + `price` (see {@link RegisterSaleInput}); this endpoint is a
+   * read-only preview and does not fiscalize anything.
+   *
+   * `currency` is a 3-letter ISO 4217 code, case-insensitive. `AMD` is rejected
+   * (it is the native receipt currency and needs no conversion).
+   */
+  getExchangeRate(
+    input: { currency: string },
+    options: RequestOptions = {},
+  ): Promise<ExchangeRate> {
+    return this.#json("GET", "/exchange-rate", exchangeRateResponseSchema, undefined, options, {
+      currency: input.currency,
+    });
   }
 
   // ─── Internal ─────────────────────────────────────────────────────────────

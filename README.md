@@ -125,23 +125,23 @@ const refund = await vcr.registerSaleRefund({
 });
 ```
 
+**Payment: `amount` or `autoSettle`.** A sale settles by *exactly one* of these — never both (the types enforce it):
+
+- `amount` — explicit AMD per tender (`{ cash?, nonCash?, prepayment?, compensation? }`), as in the quick-start.
+- `autoSettle: { tender: "cash" | "nonCash" }` — VCR computes the AMD cart total and charges the whole of it to that one tender. Zero-tap: you don't sum the cart yourself, and it's the only sane option for a foreign-currency sale (you can't know the AMD total up front).
+
 **eMark codes** (marked goods, Govt Decision 1976-N) go on each sale item as `emarks: string[]`; the same codes are echoed on refund items.
 
-**Foreign-currency sales** (HO-234-N): pass a `currencyConversion` block alongside the AMD `items`. VCR re-resolves the previous-business-day CBA rate and rejects the sale if the rate you sent is stale. The AMD `price` values in `items[]` remain the authoritative fiscal figures.
+**Foreign-currency sales** (HO-234-N): set `currency` on each item and price that item in the foreign currency. VCR converts every line to AMD server-side at the previous-business-day CBA mid-market rate; the fiscal receipt is always AMD. All foreign-priced items in one sale must share the same currency, and mixing AMD with foreign lines is rejected. Preview the rate first with [`getExchangeRate`](#exchange-rate).
 
 ```typescript
 await vcr.registerSale({
   cashier: { id: 1 },
   items: [
-    { offer: { id: 5 }, department: { id: 1 }, quantity: "1", price: "4000", unit: "pc" },
+    // price is in USD; VCR converts to AMD.
+    { offer: { id: 5 }, department: { id: 1 }, quantity: "1", price: "10", currency: "USD", unit: "pc" },
   ],
-  currencyConversion: {
-    currency: "USD",          // ISO 4217; not AMD
-    ratePerUnit: "400",       // AMD per 1 USD (CBA, previous business day)
-    rateDate: "2026-07-07",   // YYYY-MM-DD
-    lines: [{ foreignUnitPrice: "10" }], // index-aligned to items[]
-  },
-  amount: { cash: "4000" },
+  autoSettle: { tender: "cash" }, // AMD total is server-derived
   buyer: { type: "individual" },
 });
 ```
@@ -212,6 +212,20 @@ const matches = await vcr.searchClassifier({
 });
 ```
 
+### Exchange rate
+
+| Method                              | Endpoint             | Returns        |
+| ----------------------------------- | -------------------- | -------------- |
+| `getExchangeRate({ currency })`     | `GET /exchange-rate` | `ExchangeRate` |
+
+Previews the AMD conversion rate VCR would apply to a foreign-currency sale registered now — the CBA mid-market rate published on the previous business day (HO-234-N). Read-only; it does not fiscalize anything. `currency` is a 3-letter ISO 4217 code (case-insensitive); `AMD` is rejected.
+
+```typescript
+const rate = await vcr.getExchangeRate({ currency: "USD" });
+// { currency: "USD", ratePerUnit: 397.12, amount: 1, rateDate: "2026-07-08", ... }
+const amdEquivalent = Number(usdPrice) * rate.ratePerUnit;
+```
+
 ## Error handling
 
 All SDK errors derive from `VCRError`. Catch the base class for a single handler, or narrow on the specific subclass.
@@ -262,7 +276,7 @@ The whole request flow — connection, body read, schema parse — is bounded by
 
 ## Idempotency and retries
 
-**The SDK does not retry.** This is intentional. The fiscal API does not currently support idempotency keys, so retrying a `registerSale` after a network blip can double-fiscalize a receipt. Implement application-level retry only on operations you have confirmed are safe to repeat (typically reads: `whoami`, `getSale`, `getPrepayment`, `listPrepayments`, `listCashiers`, `listOffers`, `getOffer`, `listDepartments`, `searchClassifier`).
+**The SDK does not retry.** This is intentional. The fiscal API does not currently support idempotency keys, so retrying a `registerSale` after a network blip can double-fiscalize a receipt. Implement application-level retry only on operations you have confirmed are safe to repeat (typically reads: `whoami`, `getSale`, `getPrepayment`, `listPrepayments`, `listCashiers`, `listOffers`, `getOffer`, `listDepartments`, `searchClassifier`, `getExchangeRate`).
 
 ## Browser usage
 

@@ -2,6 +2,33 @@
 
 All notable changes to `@blob-solutions/vcr-am-sdk`. The format is loosely based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project follows [Semantic Versioning](https://semver.org/).
 
+## [0.15.0] — 2026-07-09
+
+Fixes the foreign-currency request contract, which 0.14.0 modeled incorrectly, and closes the last two gaps against `/api/v1` (`autoSettle` and `GET /exchange-rate`).
+
+### Fixed — foreign-currency contract (breaking, but 0.14.0's shape never worked)
+
+- **Removed `RegisterSaleInput.currencyConversion` and the `CurrencyConversionInput` type.** The API never accepted a top-level `currencyConversion` block — `POST /sales` silently stripped it, so a "foreign-currency" sale sent via 0.14.0 was fiscalized with no HO-234-N conversion trail at all. The real contract is **per-item**: set `SaleItem.currency` (ISO 4217, e.g. `"USD"`) and denominate that item's `price` in the foreign currency; VCR converts every line to AMD server-side at the previous-business-day CBA rate. All foreign-priced items in one sale must share one currency, and mixing AMD with foreign lines is rejected.
+
+  ```diff
+  - items: [{ offer: { id: 5 }, department: { id: 1 }, quantity: "1", price: "4000", unit: "pc" }],
+  - currencyConversion: { currency: "USD", ratePerUnit: "400", rateDate: "2026-07-07", lines: [{ foreignUnitPrice: "10" }] },
+  - amount: { cash: "4000" },
+  + items: [{ offer: { id: 5 }, department: { id: 1 }, quantity: "1", price: "10", currency: "USD", unit: "pc" }],
+  + autoSettle: { tender: "cash" },
+  ```
+
+### Added
+
+- `SaleItem.currency?: string` — per-item ISO 4217 input currency (see above). Omit or `"AMD"` for a native AMD line.
+- `RegisterSaleInput.autoSettle?: { tender: "cash" | "nonCash" }` — derived-total payment: VCR computes the AMD cart total and charges the whole of it to one tender. A sale now carries **exactly one** of `amount` (explicit AMD) or `autoSettle`; the types enforce the XOR, mirroring the server's cross-field validation. The essential companion to foreign-currency sales, where the AMD total is not knowable client-side. New exported types `AutoSettle`, `SalePayment`.
+- `getExchangeRate({ currency })` — wraps `GET /exchange-rate`. Previews the AMD conversion rate VCR would apply to a foreign-currency sale registered now (CBA mid-market rate, previous business day, HO-234-N). Read-only; rejects `AMD`. New type `ExchangeRate`, new schema `exchangeRateResponseSchema`.
+
+### Changed
+
+- `RegisterSaleInput.amount` is no longer required on its own — it is one arm of the `amount` / `autoSettle` union. Existing `{ ..., amount }` call sites are unaffected.
+- Dev tooling patch bumps (`@tsconfig/node24`, `@tsconfig/strictest`, `vite`). No change to the published package. TypeScript 7, pnpm 11, and `@types/node` 26 are available but intentionally deferred (kept aligned with the platform monorepo, which pins TypeScript 5.9).
+
 ## [0.14.0] — 2026-07-08
 
 Closes the drift that had accumulated against `/api/v1` since 0.13.0. Everything here is additive — no call-site changes required.

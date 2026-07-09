@@ -77,7 +77,27 @@ export type SaleItem = {
   offer: Offer;
   department: DepartmentInput;
   quantity: string;
+  /**
+   * Unit price. AMD by default. When {@link SaleItem.currency} is set to a
+   * non-AMD code, this value is denominated in that foreign currency and VCR
+   * converts it to AMD server-side at the authoritative CBA rate — never send
+   * a pre-converted AMD figure alongside a `currency`.
+   */
   price: string;
+  /**
+   * Optional ISO 4217 input currency for foreign-currency sales (HO-234-N,
+   * server-side conversion). Omit — or set to `"AMD"` — for a native AMD line.
+   *
+   * When set to a non-AMD code (e.g. `"USD"`, `"RUB"`), `price` is read in that
+   * currency and VCR converts every line to AMD at the previous-business-day
+   * CBA mid-market rate; the fiscal receipt is always issued in AMD. All
+   * foreign-priced items in one sale MUST share the same currency — mixing two
+   * currencies, or AMD and foreign lines, in a single sale is rejected. Pair
+   * with `autoSettle` (see {@link RegisterSaleInput}) so you don't have to know
+   * the AMD total up front, and preview the applied rate via
+   * {@link VCRClient.getExchangeRate}. Normalized to uppercase server-side.
+   */
+  currency?: string;
   unit: Unit;
   discounts?: Discounts;
   totalAmountTolerance?: string;
@@ -86,26 +106,6 @@ export type SaleItem = {
    * Omit or leave empty for unmarked goods. One entry per physical unit sold.
    */
   emarks?: string[];
-};
-
-/**
- * Foreign-currency input trail (HO-234-N). Present only when the sale was
- * entered in a non-AMD currency; omit it entirely for native-AMD sales.
- *
- * The AMD `price` values in `items[]` remain the authoritative fiscal figures.
- * This block carries the raw foreign inputs plus the CBA rate the client used;
- * the server re-resolves the previous-business-day rate and rejects the sale
- * if the supplied rate is stale.
- */
-export type CurrencyConversionInput = {
-  /** 3-letter ISO 4217 code (normalized to uppercase server-side). Not AMD. */
-  currency: string;
-  /** AMD per one unit of `currency` (CBA rate / amount). */
-  ratePerUnit: string;
-  /** Rate date in `YYYY-MM-DD` (CBA previous business day). */
-  rateDate: string;
-  /** Per-line foreign unit prices, index-aligned to `items[]`. At least one. */
-  lines: Array<{ foreignUnitPrice: string }>;
 };
 
 export type SaleAmount = RequireAtLeastOne<{
@@ -150,17 +150,35 @@ type LegalEntityBuyer = BuyerContact & {
 
 export type Buyer = IndividualBuyer | LegalEntityBuyer;
 
+/**
+ * Derived-total payment: name a single tender and VCR settles the whole
+ * server-computed AMD cart total on it. Only `cash` / `nonCash` — `prepayment`
+ * and `compensation` are ledger draws that must be stated explicitly via
+ * {@link SaleAmount}. Ideal for foreign-currency sales (the AMD total isn't
+ * known client-side) or any sale that would rather not sum the cart itself.
+ */
+export type AutoSettle = {
+  tender: "cash" | "nonCash";
+};
+
+/** Explicit AMD amount per tender. Mutually exclusive with `autoSettle`. */
+type PayByAmount = { amount: SaleAmount; autoSettle?: never };
+
+/** VCR derives the AMD total onto one tender. Mutually exclusive with `amount`. */
+type PayByAutoSettle = { autoSettle: AutoSettle; amount?: never };
+
+/**
+ * A sale settles EITHER by explicit `amount` OR by `autoSettle` — exactly one,
+ * never both. The `never` guards make passing both a compile error, mirroring
+ * the server's cross-field validation.
+ */
+export type SalePayment = PayByAmount | PayByAutoSettle;
+
 export type RegisterSaleInput = {
   cashier: CashierId;
   items: SaleItem[];
-  /**
-   * Optional foreign-currency input. Absent => native-AMD sale, byte-identical
-   * to the pre-existing behaviour. See {@link CurrencyConversionInput}.
-   */
-  currencyConversion?: CurrencyConversionInput;
-  amount: SaleAmount;
   buyer: Buyer;
-};
+} & SalePayment;
 
 /** @deprecated Use {@link RegisterSaleInput} instead. Will be removed in 1.0. */
 export type SaleData = RegisterSaleInput;

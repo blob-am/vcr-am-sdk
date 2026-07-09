@@ -163,7 +163,7 @@ describe("VCRClient.registerSale (regression)", () => {
 });
 
 describe("VCRClient.registerSale (foreign currency + eMarks)", () => {
-  it("sends currencyConversion, per-item emarks, and an offer-by-id on the wire", async () => {
+  it("sends per-item currency + foreign price, per-item emarks, and an offer-by-id on the wire", async () => {
     const fetchMock = makeFetchMock({ body: VALID_SALE_RESPONSE });
     const client = new VCRClient("k", { fetch: fetchMock });
 
@@ -174,26 +174,52 @@ describe("VCRClient.registerSale (foreign currency + eMarks)", () => {
           offer: { id: 5 },
           department: { id: 1 },
           quantity: "1",
-          price: "4000",
+          // Foreign unit price — VCR converts to AMD server-side.
+          price: "10",
+          currency: "USD",
           unit: "pc",
           emarks: ["0104607800000000215abcDEF12345"],
         },
       ],
-      currencyConversion: {
-        currency: "USD",
-        ratePerUnit: "400",
-        rateDate: "2026-07-07",
-        lines: [{ foreignUnitPrice: "10" }],
-      },
-      amount: { cash: "4000" },
+      // The AMD total isn't known client-side for a foreign sale, so settle
+      // the derived total onto one tender.
+      autoSettle: { tender: "cash" },
       buyer: { type: "individual" },
     });
 
     const sent = JSON.parse(fetchMock.calls[0]?.body ?? "{}");
-    expect(sent.currencyConversion.currency).toBe("USD");
-    expect(sent.currencyConversion.ratePerUnit).toBe("400");
-    expect(sent.currencyConversion.lines).toEqual([{ foreignUnitPrice: "10" }]);
+    expect(sent.items[0].currency).toBe("USD");
+    expect(sent.items[0].price).toBe("10");
+    expect(sent.autoSettle).toEqual({ tender: "cash" });
+    // The top-level currencyConversion block the API never accepted is gone.
+    expect(sent.currencyConversion).toBeUndefined();
     expect(sent.items[0].emarks).toEqual(["0104607800000000215abcDEF12345"]);
     expect(sent.items[0].offer).toEqual({ id: 5 });
+  });
+});
+
+describe("VCRClient.registerSale (autoSettle)", () => {
+  it("sends autoSettle and no amount for a native-AMD derived-total sale", async () => {
+    const fetchMock = makeFetchMock({ body: VALID_SALE_RESPONSE });
+    const client = new VCRClient("k", { fetch: fetchMock });
+
+    await client.registerSale({
+      cashier: { id: 1 },
+      items: [
+        {
+          offer: { externalId: "sku-1" },
+          department: { id: 1 },
+          quantity: "2",
+          price: "750",
+          unit: "pc",
+        },
+      ],
+      autoSettle: { tender: "nonCash" },
+      buyer: { type: "individual" },
+    });
+
+    const sent = JSON.parse(fetchMock.calls[0]?.body ?? "{}");
+    expect(sent.autoSettle).toEqual({ tender: "nonCash" });
+    expect(sent.amount).toBeUndefined();
   });
 });

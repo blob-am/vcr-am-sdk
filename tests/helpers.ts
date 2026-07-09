@@ -80,7 +80,11 @@ export function makeFetchMock(
   return Object.assign(vi.fn(impl), { calls });
 }
 
-export const VALID_SALE: SaleData = {
+// `satisfies` (not `: SaleData`) keeps the narrow `PayByAmount` literal type, so
+// `{ ...VALID_SALE, amount: {...} }` in the regression test stays in the amount
+// arm instead of widening to the amount/autoSettle union (which would clash on
+// the `never` guards under exactOptionalPropertyTypes).
+export const VALID_SALE = {
   cashier: { id: 1 },
   items: [
     {
@@ -93,7 +97,7 @@ export const VALID_SALE: SaleData = {
   ],
   amount: { cash: "1000" },
   buyer: { type: "individual" },
-};
+} satisfies SaleData;
 
 export const VALID_SALE_RESPONSE = {
   urlId: "abc123",

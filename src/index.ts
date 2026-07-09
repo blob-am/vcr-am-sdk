@@ -31,6 +31,8 @@ export {
   type DepartmentListItem,
   departmentListItemSchema,
   departmentListResponseSchema,
+  type ExchangeRate,
+  exchangeRateResponseSchema,
   type OfferListItem,
   offerListItemSchema,
   offerListResponseSchema,

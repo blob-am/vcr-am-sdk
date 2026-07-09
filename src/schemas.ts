@@ -87,6 +87,27 @@ export const createDepartmentResponseSchema = z.object({
   department: z.number().int().nonnegative(),
 });
 
+// ─── Exchange rate ────────────────────────────────────────────────────────────
+
+// Mirrors the server's ExchangeRate response. `rateDate` / `saleDate` are kept
+// as plain strings (not a date-format regex) so a wire value can never make the
+// response fail to parse — the server already guarantees `YYYY-MM-DD`.
+export const exchangeRateResponseSchema = z.object({
+  /** ISO 4217 code, uppercased (echoes the requested currency). */
+  currency: z.string(),
+  /** AMD per one unit of `currency` (CBA rate / amount). */
+  ratePerUnit: z.number(),
+  /** CBA multi-lot multiplier (1, 100, 1000, ...). */
+  amount: z.number().int(),
+  /** Yerevan date whose rate was applied — the previous business day. */
+  rateDate: z.string(),
+  /** Yerevan calendar date the rate resolves for (server time). */
+  saleDate: z.string(),
+  /** Legal rule version applied (e.g. "HO-234-N"). */
+  ruleVersion: z.string(),
+  source: z.literal("CBA"),
+});
+
 // ─── Account ──────────────────────────────────────────────────────────────────
 
 export const whoamiResponseSchema = z.object({
@@ -303,3 +324,4 @@ export type PrepaymentListItem = z.infer<typeof prepaymentListItemSchema>;
 export type PrepaymentState = z.infer<typeof prepaymentStateSchema>;
 export type CustomerPrepaymentBalance = z.infer<typeof customerPrepaymentBalanceResponseSchema>;
 export type DepartmentListItem = z.infer<typeof departmentListItemSchema>;
+export type ExchangeRate = z.infer<typeof exchangeRateResponseSchema>;
