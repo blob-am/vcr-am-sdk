@@ -238,6 +238,7 @@ export const saleDetailResponseSchema = z.object({
   id: z.number().int().nonnegative(),
   createdAt: isoDateTimeSchema,
   buyerTin: z.string().nullable(),
+  comment: z.string().nullable(),
   cashAmount: z.number(),
   nonCashAmount: z.number(),
   prepaymentAmount: z.number(),

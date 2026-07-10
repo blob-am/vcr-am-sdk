@@ -2,6 +2,23 @@
 
 All notable changes to `@blob-solutions/vcr-am-sdk`. The format is loosely based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project follows [Semantic Versioning](https://semver.org/).
 
+## [0.16.0] — 2026-07-10
+
+### Added
+
+- **`RegisterSaleInput.comment?: string`** — an optional merchant-internal note on a sale, e.g. an external payment reference for reconciliation. Max 500 characters; the server strips control characters and trims surrounding whitespace, and normalizes an empty result to "no comment". It is purely internal: it is **never** printed on the buyer's receipt and **never** sent to the tax authority (SRC). Omit the field (or send an empty string) for no comment.
+
+  ```ts
+  await vcr.registerSale({
+    cashier: { id: 1 },
+    items: [{ offer: { id: 5 }, department: { id: 1 }, quantity: "1", price: "4000", unit: "pc" }],
+    amount: { cash: "4000" },
+    comment: "Stripe pi_3Qc...",
+  });
+  ```
+
+- **`SaleDetail.comment: string | null`** — `getSale(id)` now returns the sale's comment (or `null` when none was set), so an integration can read back the reference it attached.
+
 ## [0.15.0] — 2026-07-09
 
 Fixes the foreign-currency request contract, which 0.14.0 modeled incorrectly, and closes the last two gaps against `/api/v1` (`autoSettle` and `GET /exchange-rate`).
