@@ -66,6 +66,7 @@ describe("saleDetailResponseSchema (localization)", () => {
     id: 1,
     createdAt: "2026-04-15T12:34:56.789Z",
     buyerTin: null,
+    comment: null,
     cashAmount: 0,
     nonCashAmount: 0,
     prepaymentAmount: 0,

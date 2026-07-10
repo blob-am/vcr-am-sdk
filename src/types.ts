@@ -178,6 +178,13 @@ export type RegisterSaleInput = {
   cashier: CashierId;
   items: SaleItem[];
   buyer: Buyer;
+  /**
+   * Optional merchant-internal note, e.g. an external payment reference. Max
+   * 500 characters; control characters are stripped and surrounding whitespace
+   * trimmed server-side. It is purely internal: never printed on the buyer's
+   * receipt and never sent to the tax authority (SRC).
+   */
+  comment?: string;
 } & SalePayment;
 
 /** @deprecated Use {@link RegisterSaleInput} instead. Will be removed in 1.0. */

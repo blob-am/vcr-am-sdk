@@ -130,6 +130,8 @@ const refund = await vcr.registerSaleRefund({
 - `amount` — explicit AMD per tender (`{ cash?, nonCash?, prepayment?, compensation? }`), as in the quick-start.
 - `autoSettle: { tender: "cash" | "nonCash" }` — VCR computes the AMD cart total and charges the whole of it to that one tender. Zero-tap: you don't sum the cart yourself, and it's the only sane option for a foreign-currency sale (you can't know the AMD total up front).
 
+**Comment** (optional): pass `comment` to attach a merchant-internal note to the sale — typically an external payment reference for reconciliation (`comment: "Stripe pi_3Qc..."`). Max 500 characters; the server strips control characters and trims whitespace. It is purely internal — never printed on the buyer's receipt and never sent to the tax authority — and `getSale(id)` reads it back as `SaleDetail.comment`.
+
 **eMark codes** (marked goods, Govt Decision 1976-N) go on each sale item as `emarks: string[]`; the same codes are echoed on refund items.
 
 **Foreign-currency sales** (HO-234-N): set `currency` on each item and price that item in the foreign currency. VCR converts every line to AMD server-side at the previous-business-day CBA mid-market rate; the fiscal receipt is always AMD. All foreign-priced items in one sale must share the same currency, and mixing AMD with foreign lines is rejected. Preview the rate first with [`getExchangeRate`](#exchange-rate).
