@@ -278,7 +278,26 @@ The whole request flow — connection, body read, schema parse — is bounded by
 
 ## Idempotency and retries
 
-**The SDK does not retry.** This is intentional. The fiscal API does not currently support idempotency keys, so retrying a `registerSale` after a network blip can double-fiscalize a receipt. Implement application-level retry only on operations you have confirmed are safe to repeat (typically reads: `whoami`, `getSale`, `getPrepayment`, `listPrepayments`, `listCashiers`, `listOffers`, `getOffer`, `listDepartments`, `searchClassifier`, `getExchangeRate`).
+**The SDK does not retry.** This is intentional: a blind retry of `registerSale` can double-fiscalize a receipt, and a duplicate fiscal receipt is a real tax document — it cannot be deleted, only refunded.
+
+To retry a document-creating call safely, pass `idempotencyKey`:
+
+```typescript
+await vcr.registerSale(sale, { idempotencyKey: `order-${order.id}` });
+```
+
+The key makes the retry a replay: the original response comes back verbatim and nothing new is created. This covers the case that bites hardest — a 502 from an unreachable tax service, where the sale **was** saved on our side and a naive retry would register a second one.
+
+The SDK deliberately does not generate the key for you. It only helps if the value stays **stable across your retries**, so it has to come from something you own — an order id, a job id — not a fresh UUID per call.
+
+Rules:
+
+- Same key, same body -> the original response, with an `Idempotent-Replay: true` header.
+- Same key, different body -> `422`. Use one key per distinct operation.
+- Same key while the first call is still running -> `409`. Retry shortly, with the same key.
+- Keys are scoped per register and per endpoint, and are retained for 24 hours.
+
+Reads (`whoami`, `getSale`, `getPrepayment`, `listPrepayments`, `listCashiers`, `listOffers`, `getOffer`, `listDepartments`, `searchClassifier`, `getExchangeRate`) are always safe to repeat and need no key.
 
 ## Browser usage
 

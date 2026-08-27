@@ -66,6 +66,28 @@ describe("VCRClient.registerSale", () => {
     expect(JSON.parse(call?.body ?? "")).toEqual(VALID_SALE);
   });
 
+  it("sends Idempotency-Key when one is supplied", async () => {
+    const fetchMock = makeFetchMock({ body: VALID_SALE_RESPONSE });
+    const client = new VCRClient("test-key", { fetch: fetchMock });
+
+    await client.registerSale(VALID_SALE, { idempotencyKey: "order-4821" });
+
+    const call = fetchMock.calls[0];
+    expect(call?.headers["idempotency-key"]).toBe("order-4821");
+  });
+
+  // Absent by default: sending a key the caller did not choose would be worse
+  // than sending none, because a per-call value cannot survive their retry.
+  it("omits Idempotency-Key when none is supplied", async () => {
+    const fetchMock = makeFetchMock({ body: VALID_SALE_RESPONSE });
+    const client = new VCRClient("test-key", { fetch: fetchMock });
+
+    await client.registerSale(VALID_SALE);
+
+    const call = fetchMock.calls[0];
+    expect(call?.headers["idempotency-key"]).toBeUndefined();
+  });
+
   it("throws VCRApiError on a 4xx with the unified error envelope", async () => {
     const fetchMock = makeFetchMock({
       status: 401,

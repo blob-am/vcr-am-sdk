@@ -7,6 +7,20 @@ export type RequestOptions = {
   signal?: AbortSignal;
   /** Override per-request timeout in ms. `null` disables the timeout. */
   timeoutMs?: number | null;
+  /**
+   * Opt-in replay protection for the document-creating endpoints
+   * (`registerSale`, `registerSaleRefund`, `registerPrepayment`,
+   * `registerPrepaymentRefund`). Retrying a request that carries the same key
+   * returns the original response instead of registering a second document.
+   *
+   * Strongly recommended. Without it, retrying after a 502 produces a
+   * duplicate fiscal receipt, which can only be undone by issuing a refund.
+   *
+   * The SDK deliberately does not generate this for you: the value must stay
+   * **stable across your retries**, so it has to come from something you own —
+   * typically your order id (`order-4821`) — not from a fresh UUID per call.
+   */
+  idempotencyKey?: string;
 };
 
 export type FetchInit = {
@@ -38,6 +52,9 @@ export async function requestJson<TSchema extends z.ZodTypeAny>(
     "x-api-key": apiKey,
     accept: "application/json",
   };
+  if (init.idempotencyKey !== undefined) {
+    headers["idempotency-key"] = init.idempotencyKey;
+  }
 
   const requestInit: RequestInit = { method, headers };
   if (body !== undefined) {
