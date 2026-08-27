@@ -7,6 +7,7 @@ export * from "./constants";
 export {
   type ApiErrorBody,
   type ApiErrorIssue,
+  type PendingResource,
   VCRApiError,
   VCRError,
   VCRNetworkError,

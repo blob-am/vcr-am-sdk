@@ -6,6 +6,22 @@ export type ApiErrorIssue = {
   code: string;
 };
 
+/**
+ * A document VCR persisted and queued for automatic resubmission to SRC.
+ *
+ * Present on a 502 when SRC was merely unreachable. It means the request was
+ * NOT lost: VCR owns the work and a background sweep usually completes it
+ * within minutes. Poll `statusUrl` to find out; do NOT resend the request,
+ * which would produce a second fiscal receipt.
+ */
+export type PendingResource = {
+  /** Which collection `id` belongs to, e.g. `"sale"` or `"prepayment"`. */
+  type: string;
+  id: number;
+  /** Path to poll for the outcome, e.g. `/api/v1/sales/5122`. */
+  statusUrl: string;
+};
+
 export type ApiErrorBody = {
   error: string;
   issues?: Array<ApiErrorIssue>;
@@ -15,6 +31,11 @@ export type ApiErrorBody = {
    * and Sentry event can be located.
    */
   requestId?: string;
+  /**
+   * Set when the request was persisted despite the error. Its absence on an
+   * error means nothing was created.
+   */
+  pending?: PendingResource;
 };
 
 /**

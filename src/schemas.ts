@@ -17,6 +17,19 @@ export const apiErrorBodySchema = z.object({
   // Kept lenient (plain string, not `.uuid()`) so a malformed value can never
   // make the error envelope fail to parse and mask the real API error.
   requestId: z.string().optional(),
+  // Present on a 502 when the document was persisted and queued for automatic
+  // resubmission to SRC. Its presence means the request was NOT lost.
+  //
+  // `type` is deliberately a plain string rather than an enum: a server that
+  // adds a new pending resource type must not make the whole error envelope
+  // fail to parse in an older SDK, which would mask the real API error.
+  pending: z
+    .object({
+      type: z.string(),
+      id: z.number(),
+      statusUrl: z.string(),
+    })
+    .optional(),
 });
 
 const isoDateTimeSchema = z
