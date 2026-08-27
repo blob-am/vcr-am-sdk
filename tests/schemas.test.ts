@@ -65,6 +65,7 @@ describe("saleDetailResponseSchema (localization)", () => {
   const baseDetail = {
     id: 1,
     createdAt: "2026-04-15T12:34:56.789Z",
+    srcStatus: "accepted",
     buyerTin: null,
     comment: null,
     cashAmount: 0,

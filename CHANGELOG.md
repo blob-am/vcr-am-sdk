@@ -2,6 +2,36 @@
 
 All notable changes to `@blob-solutions/vcr-am-sdk`. The format is loosely based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project follows [Semantic Versioning](https://semver.org/).
 
+## [0.17.0] — 2026-08-28
+
+Makes a `502` from an unreachable tax service recoverable. Until now the SDK told you the call failed but gave you no way to learn whether the document survived, and the only obvious response — retry — was the one that creates a duplicate fiscal receipt.
+
+### Added
+
+- **`ApiErrorBody.pending?: PendingResource`** — a `502` raised because SRC was unreachable now carries `{ type, id, statusUrl }`. It means the document **was** persisted and queued for automatic resubmission: do not resend it. Previously the SDK dropped the field, because the error envelope parses with a non-strict `z.object` and unknown keys are silently stripped.
+
+  ```ts
+  try {
+    await vcr.registerSale(sale);
+  } catch (error) {
+    if (error instanceof VCRApiError && error.body.pending !== undefined) {
+      await queue.push(error.body.pending); // nothing was lost
+      return;
+    }
+    throw error;
+  }
+  ```
+
+  `type` is a plain string rather than an enum on purpose: if the server adds a pending resource type an older SDK does not know about, an enum would fail the whole envelope and mask the real API error.
+
+- **`RequestOptions.idempotencyKey?: string`** — sends an `Idempotency-Key` header on document-creating calls. Same key and same body replays the original response verbatim (with `Idempotent-Replay: true`) instead of creating a second document; same key with a different body is a `422`; same key while the first call is still in flight is a `409`. Keys are scoped per register and per endpoint and retained for 24 hours.
+
+  The SDK deliberately does **not** generate the key. It only helps if the value is stable across your retries, so it has to come from something you own — an order id, a job id — never a fresh UUID per call.
+
+- **`SaleDetail.srcStatus` / `PrepaymentDetail.srcStatus`** (and the exported `SrcStatus` type) — where the document stands with SRC: `accepted`, `rejected`, `pending`, or `needs_decision`. This is what closes the loop after a `pending` 502: read the document back and check this field rather than resending.
+
+  `pending` and `rejected` are genuinely different outcomes — the first means VCR still owns the retry and you must not resend, the second means SRC refused the payload and resending it unchanged gets the same answer.
+
 ## [0.16.0] — 2026-07-10
 
 ### Added

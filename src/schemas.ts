@@ -247,9 +247,27 @@ const saleRefundPickSchema = z.object({
   items: z.array(z.object({ quantity: z.number() })),
 });
 
+/**
+ * Where a document stands with the tax authority, derived from its submission
+ * log. This is the field to poll after a 502 that carried a `pending` handle.
+ *
+ * - `accepted` — SRC registered it. Terminal and final; a fiscal receipt exists.
+ * - `rejected` — SRC refused the document itself. Terminal: resending the same
+ *   payload gets the same refusal, so something has to change.
+ * - `pending` — no answer from SRC yet. VCR owns the retry; do NOT resend.
+ * - `needs_decision` — the automatic retry window (24h) closed without an
+ *   answer. Still not resendable blind — check the document before acting.
+ *
+ * A plain enum rather than a boolean because "not accepted" spans three very
+ * different situations, and the one that matters most (`pending`) is the one
+ * that looks like failure but must not be treated as one.
+ */
+export const srcStatusSchema = z.enum(["accepted", "rejected", "pending", "needs_decision"]);
+
 export const saleDetailResponseSchema = z.object({
   id: z.number().int().nonnegative(),
   createdAt: isoDateTimeSchema,
+  srcStatus: srcStatusSchema,
   buyerTin: z.string().nullable(),
   comment: z.string().nullable(),
   cashAmount: z.number(),
@@ -276,6 +294,7 @@ export const prepaymentStateSchema = z.enum(["open", "consumed", "refunded"]);
 export const prepaymentDetailResponseSchema = z.object({
   id: z.number().int().nonnegative(),
   createdAt: isoDateTimeSchema,
+  srcStatus: srcStatusSchema,
   buyerTin: z.string().nullable(),
   cashAmount: z.number(),
   nonCashAmount: z.number(),
@@ -332,6 +351,7 @@ export type CashierListItem = z.infer<typeof cashierListItemSchema>;
 export type ClassifierSearchItem = z.infer<typeof classifierSearchItemSchema>;
 export type Whoami = z.infer<typeof whoamiResponseSchema>;
 export type OfferListItem = z.infer<typeof offerListItemSchema>;
+export type SrcStatus = z.infer<typeof srcStatusSchema>;
 export type SaleDetail = z.infer<typeof saleDetailResponseSchema>;
 export type PrepaymentDetail = z.infer<typeof prepaymentDetailResponseSchema>;
 export type PrepaymentListItem = z.infer<typeof prepaymentListItemSchema>;

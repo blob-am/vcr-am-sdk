@@ -28,6 +28,7 @@ Official TypeScript / JavaScript SDK for the [VCR.AM](https://vcr.am) Virtual Ca
 - [Error handling](#error-handling)
 - [Cancellation and timeouts](#cancellation-and-timeouts)
 - [Idempotency and retries](#idempotency-and-retries)
+- [When the tax service is unreachable](#when-the-tax-service-is-unreachable)
 - [Browser usage](#browser-usage)
 - [Development](#development)
 - [Versioning](#versioning)
@@ -298,6 +299,47 @@ Rules:
 - Keys are scoped per register and per endpoint, and are retained for 24 hours.
 
 Reads (`whoami`, `getSale`, `getPrepayment`, `listPrepayments`, `listCashiers`, `listOffers`, `getOffer`, `listDepartments`, `searchClassifier`, `getExchangeRate`) are always safe to repeat and need no key.
+
+## When the tax service is unreachable
+
+A `502` does **not** always mean nothing happened. When SRC was merely unreachable, VCR still saved the document and queued it for automatic resubmission — the error then carries a `pending` handle, and resending would fiscalize a second receipt.
+
+```typescript
+import { VCRApiError } from "@blob-solutions/vcr-am-sdk";
+
+try {
+  await vcr.registerSale(sale, { idempotencyKey: `order-${order.id}` });
+} catch (error) {
+  if (error instanceof VCRApiError && error.body.pending !== undefined) {
+    const { type, id } = error.body.pending;
+    // Nothing was lost. Record the id and check back later; do not resend.
+    await queue.push({ type, id });
+    return;
+  }
+  throw error;
+}
+```
+
+`pending` absent on an error means nothing was created, and the call can be repeated normally.
+
+To find out how a queued document ended up, read it back and check `srcStatus`:
+
+```typescript
+const sale = await vcr.getSale(id);
+
+switch (sale.srcStatus) {
+  case "accepted":
+    return markFiscalized(sale.receipt);
+  case "pending":
+    return checkAgainLater(); // VCR is still retrying; do not resend
+  case "rejected":
+    return escalate("SRC refused the document — the payload has to change");
+  case "needs_decision":
+    return escalate("automatic retries gave up after 24h");
+}
+```
+
+Most queued documents clear within minutes. `pending` is the state that most looks like failure and most must not be treated as one — resending is the one action that turns a recoverable outage into a duplicate tax document.
 
 ## Browser usage
 

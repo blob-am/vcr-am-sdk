@@ -53,7 +53,9 @@ export {
   registerSaleRefundResponseSchema,
   registerSaleResponseSchema,
   type SaleDetail,
+  type SrcStatus,
   saleDetailResponseSchema,
+  srcStatusSchema,
   type Whoami,
   whoamiResponseSchema,
 } from "./schemas";

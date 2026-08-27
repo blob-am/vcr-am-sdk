@@ -7,6 +7,7 @@ import { makeFetchMock } from "./helpers";
 const PREPAYMENT_DETAIL = {
   id: 7,
   createdAt: "2026-04-15T12:34:56.789Z",
+  srcStatus: "accepted",
   buyerTin: null,
   cashAmount: 500,
   nonCashAmount: 0,

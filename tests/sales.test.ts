@@ -7,6 +7,7 @@ import { makeFetchMock, VALID_SALE, VALID_SALE_RESPONSE } from "./helpers";
 const SALE_DETAIL = {
   id: 42,
   createdAt: "2026-04-15T12:34:56.789Z",
+  srcStatus: "accepted",
   buyerTin: null,
   comment: null,
   cashAmount: 1000,
@@ -75,6 +76,28 @@ describe("VCRClient.getSale", () => {
     expect(call?.method).toBe("GET");
     expect(call?.url).toBe(`${DEFAULT_API_URL}/sales/42`);
     expect(call?.body).toBeUndefined();
+  });
+
+  // This is what makes a 502 recoverable: the pending handle points here, and
+  // without srcStatus the caller has no way to learn the outcome.
+  it("surfaces srcStatus so a queued document can be polled", async () => {
+    const fetchMock = makeFetchMock({
+      body: { ...SALE_DETAIL, srcStatus: "pending" },
+    });
+    const client = new VCRClient("k", { fetch: fetchMock });
+
+    const result = await client.getSale(42);
+
+    expect(result.srcStatus).toBe("pending");
+  });
+
+  it("rejects a status the SDK does not model instead of passing it through", async () => {
+    const fetchMock = makeFetchMock({
+      body: { ...SALE_DETAIL, srcStatus: "probably_fine" },
+    });
+    const client = new VCRClient("k", { fetch: fetchMock });
+
+    await expect(client.getSale(42)).rejects.toThrow();
   });
 
   it("rejects negative ids before making a request", async () => {
