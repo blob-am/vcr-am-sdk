@@ -57,7 +57,6 @@ const { crn, srcReceiptId, fiscal } = await vcr.registerSale({
   items: [
     {
       offer: { externalId: "sku-coffee" },
-      department: { id: 1 },
       quantity: "1",
       price: "1500",
       unit: "pc",
@@ -142,7 +141,7 @@ await vcr.registerSale({
   cashier: { id: 1 },
   items: [
     // price is in USD; VCR converts to AMD.
-    { offer: { id: 5 }, department: { id: 1 }, quantity: "1", price: "10", currency: "USD", unit: "pc" },
+    { offer: { id: 5 }, quantity: "1", price: "10", currency: "USD", unit: "pc" },
   ],
   autoSettle: { tender: "cash" }, // AMD total is server-derived
   buyer: { type: "individual" },
@@ -190,6 +189,10 @@ const cashier = await vcr.createCashier({
 | `listDepartments()`          | `GET /departments`   | `DepartmentListItem[]`     |
 
 `listOffers({ externalId?, type?, includeArchived? })` is handy for checking whether an offer already exists (by `externalId`) before creating it. `updateOffer` renames an offer's title going forward — already-issued receipts are unchanged. Offer titles use the canonical `OfferTitle` shape (`{ type: "localized" | "universal", ... }`); `createOffer` also still accepts the deprecated legacy `{ value, localizationStrategy }` shape.
+
+**Departments decide the tax regime**, so `defaultDepartment` is the one field on `createOffer` worth stopping over. Every register is created with one department per regime — VAT, VAT-exempt, turnover tax, micro-enterprise — and they are numbered in that order, which makes `{ id: 1 }` the VAT one on every register whether or not the merchant owes VAT. Call `listDepartments()` once, read `taxRegime`, and use the id that matches how the business is actually registered. Booking a sale under the wrong regime is not rejected by anything, and a fiscal receipt can only be refunded and reissued, never corrected.
+
+Sale items then leave `department` out and inherit the offer's, so the decision is made once per offer instead of once per line.
 
 ```typescript
 const [existing] = await vcr.listOffers({ externalId: "sku-coffee" });

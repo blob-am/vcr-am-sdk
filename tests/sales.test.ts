@@ -247,3 +247,52 @@ describe("VCRClient.registerSale (autoSettle)", () => {
     expect(sent.amount).toBeUndefined();
   });
 });
+
+describe("VCRClient.registerSale (department)", () => {
+  it("omits department from the wire so the server inherits the offer's", async () => {
+    const fetchMock = makeFetchMock({ body: VALID_SALE_RESPONSE });
+    const client = new VCRClient("k", { fetch: fetchMock });
+
+    await client.registerSale({
+      cashier: { id: 1 },
+      items: [
+        {
+          offer: { externalId: "sku-1" },
+          quantity: "1",
+          price: "1000",
+          unit: "pc",
+        },
+      ],
+      amount: { cash: "1000" },
+      buyer: { type: "individual" },
+    });
+
+    const sent = JSON.parse(fetchMock.calls[0]?.body ?? "{}");
+    // Absent, not null: the server distinguishes "inherit" from an explicit
+    // value, and a null would fail its schema.
+    expect("department" in sent.items[0]).toBe(false);
+  });
+
+  it("still forwards an explicit department when the offer is overridden", async () => {
+    const fetchMock = makeFetchMock({ body: VALID_SALE_RESPONSE });
+    const client = new VCRClient("k", { fetch: fetchMock });
+
+    await client.registerSale({
+      cashier: { id: 1 },
+      items: [
+        {
+          offer: { externalId: "sku-1" },
+          department: { id: 2 },
+          quantity: "1",
+          price: "1000",
+          unit: "pc",
+        },
+      ],
+      amount: { cash: "1000" },
+      buyer: { type: "individual" },
+    });
+
+    const sent = JSON.parse(fetchMock.calls[0]?.body ?? "{}");
+    expect(sent.items[0].department).toEqual({ id: 2 });
+  });
+});

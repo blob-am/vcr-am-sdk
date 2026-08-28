@@ -75,7 +75,24 @@ export type Offer = NewOffer | ExistingOfferByExternalId | ExistingOfferById;
 
 export type SaleItem = {
   offer: Offer;
-  department: DepartmentInput;
+  /**
+   * Department to book this line under. **Omit it** unless you have a reason
+   * not to: the line then inherits the department of the offer it references
+   * (`defaultDepartment`), which for an inline new offer is the one you just
+   * declared on it.
+   *
+   * The department — not the offer — decides the tax regime printed on the
+   * receipt, and every register is created with one department per regime.
+   * So a hard-coded `{ id: 1 }` copied from an example is not a harmless
+   * default: on a register that owes no VAT it books the sale under the VAT
+   * department anyway, and the receipt shows a VAT line the merchant does not
+   * owe. Nothing rejects it, and a fiscal receipt can only be refunded and
+   * reissued, never corrected.
+   *
+   * Set it explicitly only to override the offer — selling the same SKU out
+   * of a second department (a VAT payer booking an exempt transaction, say).
+   */
+  department?: DepartmentInput;
   quantity: string;
   /**
    * Unit price. AMD by default. When {@link SaleItem.currency} is set to a

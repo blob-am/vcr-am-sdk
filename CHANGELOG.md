@@ -2,6 +2,30 @@
 
 All notable changes to `@blob-solutions/vcr-am-sdk`. The format is loosely based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project follows [Semantic Versioning](https://semver.org/).
 
+## [0.18.0] — 2026-08-28
+
+Stops making integrators guess a department id.
+
+### Changed
+
+- **`SaleItem.department` is now optional.** Omit it and the line inherits the department of the offer it references — for an inline new offer, the `defaultDepartment` you declared on it. Passing one explicitly still works and still wins, which is what you want when you deliberately sell the same SKU out of a second department.
+
+  The field was required, so every integration had to name a department per line, and the natural thing to write is the first id. That is not a harmless default: departments carry the tax regime, every register is created with one department per regime in a fixed order, and `{ id: 1 }` is the VAT one on every register whether or not the merchant owes VAT. Nothing rejects the mismatch — the receipt simply prints a VAT line the merchant does not owe, and a fiscal receipt can only be refunded and reissued, never corrected. We found this in the field.
+
+  ```diff
+   items: [
+     {
+       offer: { externalId: "sku-coffee" },
+  -    department: { id: 1 },
+       quantity: "1",
+       price: "1500",
+       unit: "pc",
+     },
+   ],
+  ```
+
+  Requires the server-side change shipped alongside it; against an older deployment an omitted `department` is a `422`.
+
 ## [0.17.0] — 2026-08-28
 
 Makes a `502` from an unreachable tax service recoverable. Until now the SDK told you the call failed but gave you no way to learn whether the document survived, and the only obvious response — retry — was the one that creates a duplicate fiscal receipt.
