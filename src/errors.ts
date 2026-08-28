@@ -9,16 +9,32 @@ export type ApiErrorIssue = {
 /**
  * A document VCR persisted and queued for automatic resubmission to SRC.
  *
- * Present on a 502 when SRC was merely unreachable. It means the request was
- * NOT lost: VCR owns the work and a background sweep usually completes it
- * within minutes. Poll `statusUrl` to find out; do NOT resend the request,
- * which would produce a second fiscal receipt.
+ * Present on two statuses, and the difference matters:
+ *
+ * - **502** — SRC was merely unreachable. A background sweep usually completes
+ *   the document within minutes; nothing is required of you.
+ * - **409** — SRC answered and refused the document on business grounds (for
+ *   example 196, the cash register is not activated at SRC). The sweep still
+ *   retries, but it will keep getting the same answer until the underlying
+ *   cause is fixed — usually on the merchant's side. Read the SRC code in
+ *   `error`.
+ *
+ * Either way the request was NOT lost. Poll `statusUrl`; do NOT resend, which
+ * would produce a second fiscal receipt.
  */
 export type PendingResource = {
-  /** Which collection `id` belongs to, e.g. `"sale"` or `"prepayment"`. */
+  /**
+   * Which collection `id` belongs to: `"sale"`, `"prepayment"`, or
+   * `"sale_refund"`. Deliberately a plain string — a server that adds a type
+   * must not break parsing in an older SDK.
+   */
   type: string;
   id: number;
-  /** Path to poll for the outcome, e.g. `/api/v1/sales/5122`. */
+  /**
+   * Path to poll for the outcome, e.g. `/api/v1/sales/5122`. For
+   * `"sale_refund"` this is the PARENT SALE: find your refund by `id` in the
+   * response's `refunds` array.
+   */
   statusUrl: string;
 };
 

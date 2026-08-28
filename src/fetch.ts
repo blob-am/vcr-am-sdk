@@ -13,8 +13,9 @@ export type RequestOptions = {
    * `registerPrepaymentRefund`). Retrying a request that carries the same key
    * returns the original response instead of registering a second document.
    *
-   * Strongly recommended. Without it, retrying after a 502 produces a
-   * duplicate fiscal receipt, which can only be undone by issuing a refund.
+   * Strongly recommended. Without it, retrying after a 502 or a 409 that
+   * carried a `pending` handle produces a duplicate fiscal receipt, which can
+   * only be undone by issuing a refund.
    *
    * The SDK deliberately does not generate this for you: the value must stay
    * **stable across your retries**, so it has to come from something you own —

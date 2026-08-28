@@ -17,8 +17,9 @@ export const apiErrorBodySchema = z.object({
   // Kept lenient (plain string, not `.uuid()`) so a malformed value can never
   // make the error envelope fail to parse and mask the real API error.
   requestId: z.string().optional(),
-  // Present on a 502 when the document was persisted and queued for automatic
-  // resubmission to SRC. Its presence means the request was NOT lost.
+  // Present on a 502 (SRC unreachable) and on a 409 that reports an SRC
+  // business rejection. Either way the document was persisted and queued for
+  // automatic resubmission: its presence means the request was NOT lost.
   //
   // `type` is deliberately a plain string rather than an enum: a server that
   // adds a new pending resource type must not make the whole error envelope
@@ -249,7 +250,8 @@ const saleRefundPickSchema = z.object({
 
 /**
  * Where a document stands with the tax authority, derived from its submission
- * log. This is the field to poll after a 502 that carried a `pending` handle.
+ * log. This is the field to poll after any response that carried a `pending`
+ * handle (502 or 409).
  *
  * - `accepted` — SRC registered it. Terminal and final; a fiscal receipt exists.
  * - `rejected` — SRC refused the document itself. Terminal: resending the same
