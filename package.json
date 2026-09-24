@@ -1,7 +1,7 @@
 {
   "name": "@blob-solutions/vcr-am-sdk",
-  "version": "0.18.0",
-  "description": "Official TypeScript/JavaScript SDK for the VCR.AM Virtual Cash Register API — fiscalize sales, refunds, and prepayments through Armenia's State Revenue Committee.",
+  "version": "0.19.0",
+  "description": "Official TypeScript/JavaScript SDK for the VCR.AM Virtual Cash Register API \u2014 fiscalize sales, refunds, and prepayments through Armenia's State Revenue Committee.",
   "keywords": [
     "vcr",
     "vcr.am",

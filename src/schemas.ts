@@ -18,17 +18,19 @@ export const apiErrorBodySchema = z.object({
   // make the error envelope fail to parse and mask the real API error.
   requestId: z.string().optional(),
   // Present on a 502 (SRC unreachable) and on a 409 that reports an SRC
-  // business rejection. Either way the document was persisted and queued for
-  // automatic resubmission: its presence means the request was NOT lost.
+  // business rejection. Either way the document was persisted: its presence
+  // means the request was NOT lost. `mayResubmit` says what to do about it.
   //
-  // `type` is deliberately a plain string rather than an enum: a server that
-  // adds a new pending resource type must not make the whole error envelope
-  // fail to parse in an older SDK, which would mask the real API error.
+  // `type` is deliberately a plain string rather than an enum, and
+  // `mayResubmit` optional for the same reason: a server that adds a pending
+  // resource type — or one older than the field — must not make the whole
+  // error envelope fail to parse, which would mask the real API error.
   pending: z
     .object({
       type: z.string(),
       id: z.number(),
       statusUrl: z.string(),
+      mayResubmit: z.boolean().optional(),
     })
     .optional(),
 });
@@ -256,9 +258,15 @@ const saleRefundPickSchema = z.object({
  * - `accepted` — SRC registered it. Terminal and final; a fiscal receipt exists.
  * - `rejected` — SRC refused the document itself. Terminal: resending the same
  *   payload gets the same refusal, so something has to change.
- * - `pending` — no answer from SRC yet. VCR owns the retry; do NOT resend.
- * - `needs_decision` — the automatic retry window (24h) closed without an
- *   answer. Still not resendable blind — check the document before acting.
+ * - `pending` — no answer from SRC yet, and VCR still owns the document: it
+ *   may already be registered there, or VCR is going to send it again. Do NOT
+ *   resend.
+ * - `needs_decision` — nothing is going to submit this document on its own.
+ *   Either the merchant has late fiscalization off (the default), in which
+ *   case SRC registered nothing and it is yours to send again, or the 24h
+ *   automatic window closed. The `502` that created it told you which via
+ *   `pending.mayResubmit`; if you no longer have that response, check the
+ *   document before acting rather than resending blind.
  *
  * A plain enum rather than a boolean because "not accepted" spans three very
  * different situations, and the one that matters most (`pending`) is the one

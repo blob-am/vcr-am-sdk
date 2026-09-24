@@ -7,20 +7,16 @@ export type ApiErrorIssue = {
 };
 
 /**
- * A document VCR persisted and queued for automatic resubmission to SRC.
+ * A document VCR persisted despite the error. Its presence means the request
+ * was NOT lost, so never resend blindly — read `mayResubmit` first.
  *
- * Present on two statuses, and the difference matters:
+ * Present on two statuses:
  *
- * - **502** — SRC was merely unreachable. A background sweep usually completes
- *   the document within minutes; nothing is required of you.
+ * - **502** — SRC was unreachable. What to do next is `mayResubmit`.
  * - **409** — SRC answered and refused the document on business grounds (for
- *   example 196, the cash register is not activated at SRC). The sweep still
- *   retries, but it will keep getting the same answer until the underlying
- *   cause is fixed — usually on the merchant's side. Read the SRC code in
- *   `error`.
- *
- * Either way the request was NOT lost. Poll `statusUrl`; do NOT resend, which
- * would produce a second fiscal receipt.
+ *   example 196, the cash register is not activated at SRC). `mayResubmit` is
+ *   always false here: the same payload earns the same refusal. Read the SRC
+ *   code in `error`, fix the cause, then send the corrected document.
  */
 export type PendingResource = {
   /**
@@ -36,6 +32,22 @@ export type PendingResource = {
    * response's `refunds` array.
    */
   statusUrl: string;
+  /**
+   * Whether sending this exact request again is safe.
+   *
+   * `false` — the document is still VCR's to settle: SRC may have registered
+   * it already, or VCR will submit it again for you. Resending risks a second
+   * fiscal receipt for one sale. Poll `statusUrl` instead.
+   *
+   * `true` — SRC registered nothing and VCR will not send it again (the
+   * merchant has late fiscalization off, which is the default). Nothing
+   * further happens server-side; resubmitting is how the document gets
+   * fiscalized.
+   *
+   * Absent when the server predates the field. Treat that as `false` — the
+   * conservative reading, and what those servers did.
+   */
+  mayResubmit?: boolean;
 };
 
 export type ApiErrorBody = {

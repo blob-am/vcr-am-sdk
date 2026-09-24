@@ -2,6 +2,33 @@
 
 All notable changes to `@blob-solutions/vcr-am-sdk`. The format is loosely based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project follows [Semantic Versioning](https://semver.org/).
 
+## [0.19.0] — 2026-09-24
+
+Tells you whether to send a failed request again.
+
+### Added
+
+- **`pending.mayResubmit`** on the error handle. VCR's own retry of a document the tax authority never received is now opt-in and off by default, so a `502` no longer implies "we will finish this for you" — and if you assume it does, the sale is never fiscalized.
+
+  `true` means SRC registered nothing and nothing will send it from VCR's side: resubmitting is how the document gets fiscalized. `false` means the document is still VCR's to settle — SRC may hold it already, or VCR will send it again — and a second POST risks a duplicate fiscal receipt, so poll `statusUrl` instead. Always `false` on a `409`: the same payload earns the same rejection.
+
+  ```ts
+  try {
+    await vcr.registerSale(sale);
+  } catch (error) {
+    if (error instanceof VcrApiException && error.body.pending?.mayResubmit) {
+      await retryLater(sale); // SRC has nothing; it is yours to send
+    }
+    // otherwise poll error.body.pending.statusUrl — do not resend
+  }
+  ```
+
+  Optional, because a VCR older than this field does not send it. Absent reads as `false`, which is what those servers did.
+
+### Changed
+
+- `srcStatus: "needs_decision"` no longer means only "the 24-hour retry window closed". With late fiscalization off — the default — a document reaches it as soon as an attempt fails, because nothing is coming to resend it.
+
 ## [0.18.0] — 2026-08-28
 
 Stops making integrators guess a department id.
