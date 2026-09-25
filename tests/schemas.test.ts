@@ -19,6 +19,32 @@ describe("registerSaleResponseSchema", () => {
     expect(result.success).toBe(true);
   });
 
+  it("surfaces receiptUrl when the server sends it", () => {
+    const result = registerSaleResponseSchema.safeParse({
+      urlId: "abc",
+      saleId: 1,
+      crn: "C",
+      srcReceiptId: 2,
+      fiscal: "F",
+      receiptUrl: "https://vcr.am/r/C/abc",
+    });
+    expect(result.success).toBe(true);
+    expect(result.data?.receiptUrl).toBe("https://vcr.am/r/C/abc");
+  });
+
+  it("still parses a response from a server that predates receiptUrl", () => {
+    // The field is a convenience. A fiscal call must not fail over it.
+    const result = registerSaleResponseSchema.safeParse({
+      urlId: "abc",
+      saleId: 1,
+      crn: "C",
+      srcReceiptId: 2,
+      fiscal: "F",
+    });
+    expect(result.success).toBe(true);
+    expect(result.data?.receiptUrl).toBeUndefined();
+  });
+
   it("rejects negative saleId", () => {
     const result = registerSaleResponseSchema.safeParse({
       urlId: "abc",

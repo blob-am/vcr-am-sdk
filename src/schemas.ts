@@ -57,12 +57,25 @@ const additionalDiscountTypeSchema = z.enum(["percent", "total"]).nullable();
 
 // ─── Action responses ────────────────────────────────────────────────────────
 
+/**
+ * Public receipt page for the buyer — safe to email, print as a QR, or put on
+ * an order-confirmation page: it carries no account access. The page picks the
+ * reader's own language.
+ *
+ * Optional, and deliberately so: the field was added to the API after this
+ * schema shipped, and a client that required it would fail to parse a
+ * perfectly good receipt from a server that predates it. A convenience field
+ * must never be the reason a fiscal call errors. It is always present from
+ * vcr.am today; build it yourself from `crn` and `urlId` if you need a
+ * fallback.
+ */
 export const registerSaleResponseSchema = z.object({
   urlId: z.string(),
   saleId: z.number().int().nonnegative(),
   crn: z.string(),
   srcReceiptId: z.number().int().nonnegative(),
   fiscal: z.string(),
+  receiptUrl: z.string().optional(),
 });
 
 export const registerSaleRefundResponseSchema = z.object({
@@ -71,6 +84,8 @@ export const registerSaleRefundResponseSchema = z.object({
   crn: z.string().nullable(),
   receiptId: z.number().int().nonnegative(),
   fiscal: z.string().nullable(),
+  /** Null under the same condition that leaves `crn` null. */
+  receiptUrl: z.string().nullish(),
 });
 
 export const registerPrepaymentResponseSchema = z.object({
@@ -79,6 +94,8 @@ export const registerPrepaymentResponseSchema = z.object({
   crn: z.string().nullable(),
   receiptId: z.number().int().nonnegative(),
   fiscal: z.string().nullable(),
+  /** Null under the same condition that leaves `crn` null. */
+  receiptUrl: z.string().nullish(),
 });
 
 export const registerPrepaymentRefundResponseSchema = z.object({
@@ -87,6 +104,8 @@ export const registerPrepaymentRefundResponseSchema = z.object({
   crn: z.string().nullable(),
   receiptId: z.number().int().nonnegative(),
   fiscal: z.string().nullable(),
+  /** Null under the same condition that leaves `crn` null. */
+  receiptUrl: z.string().nullish(),
 });
 
 export const createOfferResponseSchema = z.object({
