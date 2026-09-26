@@ -299,7 +299,8 @@ Rules:
 - Same key, same body -> the original response, with an `Idempotent-Replay: true` header.
 - Same key, different body -> `422`. Use one key per distinct operation.
 - Same key while the first call is still running -> `409`. Retry shortly, with the same key.
-- Keys are scoped per register and per endpoint, and are retained for 24 hours.
+- Same key after the server rejected the body on validation -> the key was never spent. The request did not reach the operation, so fix the field and retry with the same key.
+- Keys are scoped per register and per endpoint, and stay replayable for 30 days.
 
 Reads (`whoami`, `getSale`, `getPrepayment`, `listPrepayments`, `listCashiers`, `listOffers`, `getOffer`, `listDepartments`, `searchClassifier`, `getExchangeRate`) are always safe to repeat and need no key.
 
