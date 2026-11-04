@@ -7,6 +7,7 @@ All notable changes to `@blob-solutions/vcr-am-sdk`. The format is loosely based
 ### Added
 
 - **`prepaymentId`** on `registerSale`. Names the prepayment `amount.prepayment` is spent from, so offsetting one order cannot use up another order's prepayment. A prepayment that cannot cover the amount refuses the sale with a `400` and nothing saved.
+- **`returnRemainder`** on `registerPrepaymentRefund`. Returns all that sales left of a partly used prepayment, split the way it was paid. Without it such a refund is still refused with a `409`; if sales used everything the answer is a `400`.
 
 ## [0.19.0] — 2026-09-24
 

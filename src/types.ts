@@ -264,6 +264,11 @@ export type RegisterPrepaymentInput = {
 export type RegisterPrepaymentRefundInput = {
   cashier: CashierId;
   prepaymentId: number;
+  /**
+   * Return all that sales left of the prepayment. Without it, a prepayment a
+   * sale has used is refused. There is no amount: the rest cannot stay behind.
+   */
+  returnRemainder?: true;
   receipt?: SendReceiptToBuyer;
   reason?: RefundReason;
   reasonNote?: string;
