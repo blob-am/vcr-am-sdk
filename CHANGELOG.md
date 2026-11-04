@@ -4,10 +4,18 @@ All notable changes to `@blob-solutions/vcr-am-sdk`. The format is loosely based
 
 ## [Unreleased]
 
+## [0.20.0] — 2026-11-04
+
+Lets a sale name the prepayment it spends, and returns what is left of a used one. Also the first published release of the 0.19.0 changes below: that version was never tagged, so it did not reach npm.
+
 ### Added
 
 - **`prepaymentId`** on `registerSale`. Names the prepayment `amount.prepayment` is spent from, so offsetting one order cannot use up another order's prepayment. A prepayment that cannot cover the amount refuses the sale with a `400` and nothing saved.
 - **`returnRemainder`** on `registerPrepaymentRefund`. Returns all that sales left of a partly used prepayment, split the way it was paid. Without it such a refund is still refused with a `409`; if sales used everything the answer is a `400`.
+
+### Security
+
+- **`zod` floor raised to 4.6.7**, past [GHSA-mrhx-c7xc-m3w5](https://github.com/advisories/GHSA-mrhx-c7xc-m3w5): oversized constrained collections could exhaust memory during validation.
 
 ## [0.19.0] — 2026-09-24
 
