@@ -179,10 +179,24 @@ export type AutoSettle = {
 };
 
 /** Explicit AMD amount per tender. Mutually exclusive with `autoSettle`. */
-type PayByAmount = { amount: SaleAmount; autoSettle?: never };
+type PayByAmount = {
+  amount: SaleAmount;
+  autoSettle?: never;
+  /**
+   * The prepayment `amount.prepayment` is spent from. Without it the sale
+   * consumes the oldest open prepayments, which for a buyer with no TIN means
+   * anyone's. A prepayment that cannot cover the amount refuses the sale with
+   * a `400` and nothing saved.
+   */
+  prepaymentId?: number;
+};
 
 /** VCR derives the AMD total onto one tender. Mutually exclusive with `amount`. */
-type PayByAutoSettle = { autoSettle: AutoSettle; amount?: never };
+type PayByAutoSettle = {
+  autoSettle: AutoSettle;
+  amount?: never;
+  prepaymentId?: never;
+};
 
 /**
  * A sale settles EITHER by explicit `amount` OR by `autoSettle` — exactly one,

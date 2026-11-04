@@ -2,6 +2,12 @@
 
 All notable changes to `@blob-solutions/vcr-am-sdk`. The format is loosely based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project follows [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+
+- **`prepaymentId`** on `registerSale`. Names the prepayment `amount.prepayment` is spent from, so offsetting one order cannot use up another order's prepayment. A prepayment that cannot cover the amount refuses the sale with a `400` and nothing saved.
+
 ## [0.19.0] — 2026-09-24
 
 Tells you whether to send a failed request again.
