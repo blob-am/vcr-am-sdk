@@ -265,6 +265,7 @@ const saleItemPickSchema = z.object({
 const saleRefundPickSchema = z.object({
   nonCashAmount: z.number(),
   cashAmount: z.number(),
+  prepaymentAmount: z.number(),
   receipt: receiptPickSchema.nullable(),
   items: z.array(z.object({ quantity: z.number() })),
 });

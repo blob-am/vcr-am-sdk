@@ -148,6 +148,29 @@ describe("VCRClient.registerSaleRefund", () => {
     expect(sentBody.reason).toBe("customer_request");
   });
 
+  it("sends the prepayment part of a refund on its own", async () => {
+    const fetchMock = makeFetchMock({
+      body: {
+        urlId: "u",
+        saleRefundId: 8,
+        crn: "CRN-8",
+        receiptId: 100,
+        fiscal: null,
+      },
+    });
+    const client = new VCRClient("k", { fetch: fetchMock });
+
+    await client.registerSaleRefund({
+      cashier: { id: 1 },
+      saleId: 42,
+      refundAmounts: { cash: "200", prepayment: "300" },
+      items: [{ srcId: 1, quantity: "1" }],
+    });
+
+    const sentBody = JSON.parse(fetchMock.calls[0]?.body ?? "{}");
+    expect(sentBody.refundAmounts).toEqual({ cash: "200", prepayment: "300" });
+  });
+
   it("accepts a nullable crn/fiscal in the response", async () => {
     const fetchMock = makeFetchMock({
       body: {

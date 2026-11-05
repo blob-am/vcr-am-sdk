@@ -238,6 +238,8 @@ export type RefundItemInput = {
 export type RefundAmount = RequireAtLeastOne<{
   cash?: string;
   nonCash?: string;
+  /** The part of the sale's used prepayment coming back. */
+  prepayment?: string;
 }>;
 
 export type RegisterSaleRefundInput = {

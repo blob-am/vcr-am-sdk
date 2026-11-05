@@ -125,6 +125,8 @@ const refund = await vcr.registerSaleRefund({
 });
 ```
 
+A sale paid partly with a prepayment names that part apart from the money: `refundAmounts: { cash: "200", prepayment: "300" }`. It is recorded on the return receipt on its own and read back as `prepaymentAmount` on each of `SaleDetail.refunds`. A full refund needs neither `refundAmounts` nor `items`.
+
 **Payment: `amount` or `autoSettle`.** A sale settles by *exactly one* of these — never both (the types enforce it):
 
 - `amount` — explicit AMD per tender (`{ cash?, nonCash?, prepayment?, compensation? }`), as in the quick-start.
