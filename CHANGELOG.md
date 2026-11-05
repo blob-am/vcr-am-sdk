@@ -4,6 +4,8 @@ All notable changes to `@blob-solutions/vcr-am-sdk`. The format is loosely based
 
 ## [Unreleased]
 
+## [0.21.0] — 2026-11-05
+
 ### Added
 
 - **`refundAmounts.prepayment`** on `registerSaleRefund`. A partial refund of a sale paid with a prepayment names that part on its own, instead of being refused for exceeding the cash the sale took.
