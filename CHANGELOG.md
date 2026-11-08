@@ -4,6 +4,12 @@ All notable changes to `@blob-solutions/vcr-am-sdk`. The format is loosely based
 
 ## [Unreleased]
 
+## [0.21.1] — 2026-11-08
+
+### Changed
+
+- **`fiscal` on `registerSaleRefund` and `registerPrepaymentRefund` is documented as always `null`.** SRC assigns no fiscal number to a return receipt: its `printReturnReceipt` response has no such field and the receipt QR reads `FISCAL: null`. The refund is identified by `crn` and `receiptId`. Types are unchanged.
+
 ## [0.21.0] — 2026-11-05
 
 ### Added
