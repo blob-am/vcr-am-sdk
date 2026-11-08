@@ -83,6 +83,11 @@ export const registerSaleRefundResponseSchema = z.object({
   saleRefundId: z.number().int().nonnegative(),
   crn: z.string().nullable(),
   receiptId: z.number().int().nonnegative(),
+  /**
+   * Always null on a refund: SRC assigns no fiscal number to a return
+   * receipt (its printReturnReceipt response has no such field and the QR
+   * reads `FISCAL: null`). The refund is identified by `crn` and `receiptId`.
+   */
   fiscal: z.string().nullable(),
   /** Null under the same condition that leaves `crn` null. */
   receiptUrl: z.string().nullish(),
@@ -103,6 +108,11 @@ export const registerPrepaymentRefundResponseSchema = z.object({
   prepaymentRefundId: z.number().int().nonnegative(),
   crn: z.string().nullable(),
   receiptId: z.number().int().nonnegative(),
+  /**
+   * Always null on a refund: SRC assigns no fiscal number to a return
+   * receipt (its printReturnReceipt response has no such field and the QR
+   * reads `FISCAL: null`). The refund is identified by `crn` and `receiptId`.
+   */
   fiscal: z.string().nullable(),
   /** Null under the same condition that leaves `crn` null. */
   receiptUrl: z.string().nullish(),
