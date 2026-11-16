@@ -24,9 +24,41 @@ export type RequestOptions = {
   idempotencyKey?: string;
 };
 
+/** Response header carrying the server's id for the call. */
+export const TRACE_ID_HEADER = "vcr-trace-id";
+
+/**
+ * One HTTP call to the VCR API, as it ended. Holds no headers, no bodies and
+ * no query string, so it is safe to keep in a journal.
+ */
+export type RequestAttempt = {
+  startedAt: Date;
+  method: string;
+  /** Path relative to the client's base URL, without the query string. */
+  path: string;
+  durationMs: number;
+  /** `null` when no response arrived: DNS, connect, TLS, timeout, abort. */
+  status: number | null;
+  /**
+   * The server's id for this call. Quote it to support, or pass it in
+   * `submitSupportReport({ traceIds })`, and the server's record of the call
+   * is found directly. `null` when no response arrived or something other
+   * than the API answered.
+   */
+  traceId: string | null;
+  idempotencyKey: string | null;
+  /** One line on why the call failed; `null` on success. */
+  failure: string | null;
+};
+
+export type RequestObserver = (attempt: RequestAttempt) => void;
+
 export type FetchInit = {
   method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
   url: string;
+  /** The route, for the observer: `url` minus the base URL and the query. */
+  path: string;
+  onRequestAttempt?: RequestObserver;
   apiKey: string;
   body?: unknown;
   fetchImpl: typeof fetch;
@@ -36,6 +68,67 @@ export type FetchInit = {
 export async function requestJson<TSchema extends z.ZodTypeAny>(
   schema: TSchema,
   init: FetchInit,
+): Promise<z.infer<TSchema>> {
+  const observer = init.onRequestAttempt;
+  if (observer === undefined) {
+    return exchange(schema, init, undefined);
+  }
+
+  const startedAt = new Date();
+  const startedMs = performance.now();
+  const seen: { response: Response | undefined } = { response: undefined };
+  const report = (failure: string | null): void => {
+    const traceId = seen.response?.headers.get(TRACE_ID_HEADER);
+    notify(observer, {
+      startedAt,
+      method: init.method,
+      path: init.path,
+      durationMs: Math.round(performance.now() - startedMs),
+      status: seen.response?.status ?? null,
+      traceId: traceId === undefined || traceId === null || traceId === "" ? null : traceId,
+      idempotencyKey: init.idempotencyKey ?? null,
+      failure,
+    });
+  };
+
+  let data: z.infer<TSchema>;
+  try {
+    data = await exchange(schema, init, seen);
+  } catch (error) {
+    report(failureOf(error));
+    throw error;
+  }
+  report(null);
+  return data;
+}
+
+/**
+ * The call has an outcome already and the caller must get it. A throwing
+ * observer is a bug in the observer, so it surfaces as an uncaught error on
+ * its own, instead of replacing the result of a call that may have registered
+ * a receipt.
+ */
+function notify(observer: RequestObserver, attempt: RequestAttempt): void {
+  try {
+    observer(attempt);
+  } catch (error) {
+    queueMicrotask(() => {
+      throw error;
+    });
+  }
+}
+
+function failureOf(error: unknown): string {
+  if (error instanceof VCRApiError) {
+    return error.body.error;
+  }
+  return error instanceof Error ? error.message : String(error);
+}
+
+async function exchange<TSchema extends z.ZodTypeAny>(
+  schema: TSchema,
+  init: FetchInit,
+  seen: { response: Response | undefined } | undefined,
 ): Promise<z.infer<TSchema>> {
   const { url, method, apiKey, body, fetchImpl, signal: externalSignal } = init;
 
@@ -74,6 +167,9 @@ export async function requestJson<TSchema extends z.ZodTypeAny>(
     let rawText: string;
     try {
       response = await fetchImpl(url, requestInit);
+      if (seen !== undefined) {
+        seen.response = response;
+      }
       rawText = await response.text();
     } catch (cause) {
       throw new VCRNetworkError(

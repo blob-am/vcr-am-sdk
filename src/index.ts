@@ -13,7 +13,7 @@ export {
   VCRNetworkError,
   VCRValidationError,
 } from "./errors";
-export type { RequestOptions } from "./fetch";
+export type { RequestAttempt, RequestObserver, RequestOptions } from "./fetch";
 export {
   type CashierListItem,
   type ClassifierSearchItem,
@@ -54,8 +54,10 @@ export {
   registerSaleResponseSchema,
   type SaleDetail,
   type SrcStatus,
+  type SupportReportReceipt,
   saleDetailResponseSchema,
   srcStatusSchema,
+  supportReportResponseSchema,
   type Whoami,
   whoamiResponseSchema,
 } from "./schemas";

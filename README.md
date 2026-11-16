@@ -90,6 +90,30 @@ await vcr.registerSale(sale, {
 });
 ```
 
+### Request observer
+
+`onRequestAttempt` is called for every call once it has ended, whether it succeeded, was refused, or never got an answer. It is meant for a journal on your side: when a merchant says a receipt never came out, the journal shows whether a request was sent at all.
+
+```typescript
+const vcr = new VCRClient(apiKey, {
+  onRequestAttempt: (attempt) => {
+    journal.insert({
+      at: attempt.startedAt,
+      call: `${attempt.method} ${attempt.path}`,
+      status: attempt.status,               // null: no response arrived
+      ms: attempt.durationMs,
+      traceId: attempt.traceId,
+      idempotencyKey: attempt.idempotencyKey,
+      failure: attempt.failure,             // null on success
+    });
+  },
+});
+```
+
+`traceId` is the server's id for the call, read from the `VCR-Trace-Id` response header. Quote it to support, or pass it to `submitSupportReport`, and the server's record of that call is found directly. In a browser on another origin the header is readable only if the server exposes it; expect `null` there.
+
+An attempt holds no headers, no bodies and no query string. The callback must not throw: if it does, its error is raised on its own as an uncaught error and the call still returns its real outcome.
+
 ## API reference
 
 Every method returns a typed, schema-validated response and accepts an optional `RequestOptions` (`{ signal?, timeoutMs? }`) as its last argument.
@@ -233,6 +257,25 @@ const rate = await vcr.getExchangeRate({ currency: "USD" });
 // { currency: "USD", ratePerUnit: 397.12, amount: 1, rateDate: "2026-07-08", ... }
 const amdEquivalent = Number(usdPrice) * rate.ratePerUnit;
 ```
+
+### Support
+
+| Method                         | Endpoint                | Returns                |
+| ------------------------------ | ----------------------- | ---------------------- |
+| `submitSupportReport(input)`   | `POST /support/reports` | `SupportReportReceipt` |
+
+For a "Report a problem" button. Sends what the person wrote together with what your side knows; VCR adds its own log of the register's recent calls when the report is read.
+
+```typescript
+const { reference } = await vcr.submitSupportReport({
+  message: whatThePersonTyped,
+  context: { integration: "my-shop/1.2.3", order: { status: "pending" }, recentCalls: journal },
+  traceIds: traceIdsOfTheCallsInQuestion,
+  contact: whereToAnswer,
+});
+```
+
+Send it when a person asks to, never automatically: every report is read by a human and a register is limited to 10 an hour. Leave your customers' personal data out of `context`. Show `reference` to the person and tell them to write to support@vcr.am quoting it. At least one of `message` and `context` is required; `context` is limited to 256 KB.
 
 ## Error handling
 

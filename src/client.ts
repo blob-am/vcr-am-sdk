@@ -1,6 +1,6 @@
 import type { z } from "zod";
 import { DEFAULT_API_URL, DEFAULT_TIMEOUT_MS } from "./constants";
-import { type RequestOptions, requestJson } from "./fetch";
+import { type RequestObserver, type RequestOptions, requestJson } from "./fetch";
 import {
   type CashierListItem,
   type ClassifierSearchItem,
@@ -35,7 +35,9 @@ import {
   registerSaleRefundResponseSchema,
   registerSaleResponseSchema,
   type SaleDetail,
+  type SupportReportReceipt,
   saleDetailResponseSchema,
+  supportReportResponseSchema,
   type Whoami,
   whoamiResponseSchema,
 } from "./schemas";
@@ -51,6 +53,7 @@ import type {
   RegisterSaleInput,
   RegisterSaleRefundInput,
   SearchClassifierInput,
+  SupportReportInput,
   UpdateOfferInput,
 } from "./types";
 
@@ -71,6 +74,16 @@ export type VCRClientOptions = {
   fetch?: typeof fetch;
   /** Default request timeout in ms. Pass `null` to disable. Default 30s. */
   timeoutMs?: number | null;
+  /**
+   * Told about every call once it has ended, whether it succeeded, was
+   * refused, or never got an answer. Meant for a journal on your side: when a
+   * merchant says a receipt never came out, it shows whether a request was
+   * sent at all, and `traceId` points at the server's record of the same call.
+   *
+   * Must not throw. If it does, the error is raised on its own as an uncaught
+   * error and the call still returns its real outcome.
+   */
+  onRequestAttempt?: RequestObserver;
 };
 
 type Method = "GET" | "POST" | "PATCH";
@@ -80,6 +93,7 @@ export class VCRClient {
   readonly #baseUrl: string;
   readonly #fetch: typeof fetch;
   readonly #defaultTimeoutMs: number | null;
+  readonly #onRequestAttempt: RequestObserver | undefined;
 
   constructor(apiKey: string, options: VCRClientOptions = {}) {
     if (apiKey.length === 0) {
@@ -101,6 +115,7 @@ export class VCRClient {
 
     this.#defaultTimeoutMs =
       options.timeoutMs === undefined ? DEFAULT_TIMEOUT_MS : options.timeoutMs;
+    this.#onRequestAttempt = options.onRequestAttempt;
   }
 
   // ─── Account ──────────────────────────────────────────────────────────────
@@ -357,6 +372,30 @@ export class VCRClient {
     });
   }
 
+  // ─── Support ──────────────────────────────────────────────────────────────
+
+  /**
+   * Send a diagnostic report to VCR support: what the person wrote plus what
+   * your side knows. VCR adds its own log of the register's recent calls when
+   * the report is read. For a "Report a problem" button.
+   *
+   * Send it when a person asks to, never automatically: every report is read
+   * by a human, and a register is limited to 10 an hour (`429` beyond that;
+   * the earlier ones arrived). Leave your customers' personal data out of
+   * `context`. Show the returned `reference` to the person and tell them to
+   * write to support@vcr.am quoting it.
+   *
+   * At least one of `message` and `context` is required (`400` otherwise).
+   * `context` is limited to 256 KB (`413`). Works for a register that is not
+   * activated yet.
+   */
+  submitSupportReport(
+    input: SupportReportInput,
+    options: RequestOptions = {},
+  ): Promise<SupportReportReceipt> {
+    return this.#json("POST", "/support/reports", supportReportResponseSchema, input, options);
+  }
+
   // ─── Internal ─────────────────────────────────────────────────────────────
 
   #json<TSchema extends z.ZodTypeAny>(
@@ -375,6 +414,8 @@ export class VCRClient {
     return requestJson(schema, {
       method,
       url,
+      path,
+      ...(this.#onRequestAttempt !== undefined && { onRequestAttempt: this.#onRequestAttempt }),
       apiKey: this.#apiKey,
       ...(body !== undefined && { body }),
       fetchImpl: this.#fetch,

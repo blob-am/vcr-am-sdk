@@ -16,6 +16,7 @@ export type FetchResponseDescriptor = {
   /** Override JSON serialization with a raw string body. */
   rawBody?: string;
   delayMs?: number;
+  headers?: Record<string, string>;
 };
 
 export type FetchMock = Mock<typeof fetch> & { calls: FetchCall[] };
@@ -73,7 +74,7 @@ export function makeFetchMock(
 
     return new Response(responseBody, {
       status,
-      headers: { "content-type": "application/json" },
+      headers: { "content-type": "application/json", ...descriptor.headers },
     });
   };
 

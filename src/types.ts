@@ -349,3 +349,20 @@ export type ListOffersFilter = {
   /** When true, also include archived offers. Defaults to false. */
   includeArchived?: boolean;
 };
+
+/** Argument of `submitSupportReport`. At least one of `message` and `context`. */
+export type SupportReportInput = {
+  /** What the person saw and expected, in their own words. Up to 4000 characters. */
+  message?: string;
+  /**
+   * Whatever your side knows that the server does not: versions,
+   * configuration, the state of the order, your own journal of recent calls.
+   * No personal data of your customers. Values under keys that look like
+   * credentials are redacted on arrival.
+   */
+  context?: Record<string, unknown>;
+  /** `traceId`s of the earlier calls the report is about. Up to 50. */
+  traceIds?: Array<string>;
+  /** Where the person wants the answer, if they said. Up to 200 characters. */
+  contact?: string;
+};

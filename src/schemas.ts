@@ -167,6 +167,14 @@ export const whoamiResponseSchema = z.object({
   }),
 });
 
+// ─── Support ────────────────────────────────────────────────────────────────
+
+export const supportReportResponseSchema = z.object({
+  /** Show this to the person; quoting it to support finds the report. */
+  reference: z.string(),
+  createdAt: z.string(),
+});
+
 // ─── List & search ──────────────────────────────────────────────────────────
 
 const cashierNameLocalizationSchema = z.object({
@@ -390,6 +398,7 @@ export type CreateDepartmentResponse = z.infer<typeof createDepartmentResponseSc
 export type CashierListItem = z.infer<typeof cashierListItemSchema>;
 export type ClassifierSearchItem = z.infer<typeof classifierSearchItemSchema>;
 export type Whoami = z.infer<typeof whoamiResponseSchema>;
+export type SupportReportReceipt = z.infer<typeof supportReportResponseSchema>;
 export type OfferListItem = z.infer<typeof offerListItemSchema>;
 export type SrcStatus = z.infer<typeof srcStatusSchema>;
 export type SaleDetail = z.infer<typeof saleDetailResponseSchema>;
