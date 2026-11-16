@@ -4,6 +4,8 @@ All notable changes to `@blob-solutions/vcr-am-sdk`. The format is loosely based
 
 ## [Unreleased]
 
+## [0.22.0] — 2026-11-16
+
 ### Added
 
 - **`onRequestAttempt`** client option. Called for every call once it has ended, with the method, path, status, duration, idempotency key, a one-line failure reason, and the server's trace id from the new `VCR-Trace-Id` response header. For a journal on the integrator's side.
